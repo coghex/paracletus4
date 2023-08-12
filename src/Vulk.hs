@@ -12,14 +12,20 @@ import Control.Concurrent ( forkIO )
 import Control.Monad ( forM_, when )
 import Control.Monad.State.Class ( gets, modify )
 import GHC.Stack ( HasCallStack )
-import Prog ( MonadIO(liftIO), Prog )
+import Luau ( luauThread )
+import Prog ( MonadIO(liftIO), Prog, MonadReader(ask) )
+import Prog.Event ( processEvents )
 import Prog.Util ( logInfo )
 import Sign.Var
     ( atomically, modifyTVar', newTVar, readTVar, writeTVar )
 
 runVulk ∷ HasCallStack ⇒ Prog ε σ ()
 runVulk = do
+    logInfo "loading lua interpreter..."
+    env ← ask
+    _ ← liftIO $ forkIO $ luauThread env
     -- windowsizechanged is completely seperate from all other data
     windowSizeChanged ← liftIO $ atomically $ newTVar True
     logInfo "beginning paracletus..."
-    -- TODO: load initial window size from file
+    -- some events must be processed in the parent thread
+    processEvents

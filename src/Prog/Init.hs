@@ -10,8 +10,9 @@ import UPrelude
 import qualified Control.Monad.Logger.CallStack as Logger
 import Data ( Color(..) )
 import Prog ( Prog(unProg) )
-import Prog.Data ( Env(..), State(..), Queues(..), Chans(..)
-                 , TVars(..), ProgResult(..) )
+import Prog.Data ( Env(..), State(..), ProgResult(..), QueueName(..),
+                   Queues(..), Chans(..), TVars(..))
+import Sign.Data ( Event(..), LoadCmd(..), InpCmd(..) )
 import Sign.Except ( ExType(ExProg), ProgExcept(ProgExcept) )
 import Sign.Queue ( newQueue, newTChan )
 import Sign.Var ( atomically, newTVar, TVar )
@@ -32,13 +33,24 @@ runProg c p = do
 initEnv ∷ IO (TVar Env, Env)
 initEnv = do
   luaSt ← Lua.newstate
-  let env = Env { envQueues = queues
-                , envChans  = chans
-                , envTVars  = tvars
+  -- event queues handles events from main thread, the
+  -- event thread commands are for the main draw thread
+  eventQ   ← newQueue
+  -- load queue calculates then delivers verticies/indicies
+  -- to the draw thread from the drawState
+  loadQ    ← newQueue
+  -- input thread tracks the mouse and processes input
+  inpQ     ← newQueue
+  let env = Env { envQueues = Queues queues3
+                , envChans  = Chans chans
+                , envTVars  = TVars tvars
                 , envLuaSt  = luaSt }
-      queues = Queues Map.empty
-      chans  = Chans Map.empty
-      tvars  = TVars Map.empty
+      queues0 = Map.empty
+      queues1 = Map.insert EventQueue eventQ queues0
+      queues2 = Map.insert LoadQueue  loadQ  queues1
+      queues3 = Map.insert InputQueue inpQ   queues2
+      chans  = Map.empty
+      tvars  = Map.empty
   -- and env that can be accessed transactionally
   envChan ← atomically $ newTVar env
   -- we return both so that initState doesnt need to load the TVar

@@ -6,7 +6,7 @@ module Prog.Data where
 import Prelude()
 import UPrelude
 import qualified Control.Monad.Logger.CallStack as Logger
-import Sign.Data ( TState )
+import Sign.Data ( TState, Event(..), LoadCmd(..), InpCmd(..) )
 import Sign.Except ( ProgExcept )
 import Sign.Queue ( Queue, TChan )
 import Sign.Var ( TVar )
@@ -28,16 +28,18 @@ data Env = Env { envQueues ∷ Queues
                , envLuaSt  ∷ Lua.State }
 
 -- | dynamic collection of queues
-data Queues    = ∀ α. Queues (Map QueueName (Queue α))
+data Queues    = Queues { qm ∷ Map QueueName (Queue QueueCmd) }
+data QueueCmd  = QCEvent Event | QCLoadCmd LoadCmd | QCInpCmd InpCmd
 -- | some queues are required, others can be added
 data QueueName = EventQueue | LoadQueue
-               | InputQueue | CustomQueue Int
+               | InputQueue | CustomQueue Int deriving (Show, Eq, Ord)
 -- | dynamic collection of chans
-data Chans     = Chans (Map ChanName (TChan TState))
-data ChanName  = CustomChan Int
+data Chans     = Chans { cm ∷ Map ChanName (TChan TState) }
+data ChanName  = CustomChan Int deriving (Show, Eq)
 -- | dynamic collection of tvars
-data TVars     = ∀ α. TVars (Map TVarName (TVar (Maybe α)))
-data TVarName  = WindowTVar | CustomTVar Int
+data TVars     = TVars { tm ∷ Map TVarName (TVar (Maybe TVarValue)) }
+data TVarValue = TVInt Int | TVString String
+data TVarName  = WindowTVar | CustomTVar Int deriving (Show, Eq)
 
 -- | state holds mutable data, and the
 --   current status of the whole App

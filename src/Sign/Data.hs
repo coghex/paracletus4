@@ -23,6 +23,10 @@ data Event = EventError !GLFW.Error !String -- GLFW specific
            | EventInputState !InputStateChange
            -- | lowest level actions go here
            | EventSys !SysAction
+           deriving (Show, Eq)
+
+data LoadCmd = LoadCmdNULL deriving (Show, Eq)
+data InpCmd  = InpCmdNULL  deriving (Show, Eq)
 
 -- | log levels are for monadic logger, but stdio
 data LogLevel = LogDebug Int
@@ -39,6 +43,7 @@ data InputEvent
   | InputMouseButton !GLFW.Window !GLFW.MouseButton
       !GLFW.MouseButtonState !GLFW.ModifierKeys
   | InputMouseScroll !GLFW.Window !Double !Double
+  deriving (Show, Eq)
 
 -- | input state can be changed by sending event
 data InputStateChange = ISCKeyPress !KeyFunc
@@ -50,6 +55,7 @@ data InputStateChange = ISCKeyPress !KeyFunc
 -- | data gets loaded in from a seperate thread
 data LoadData = LoadData-- LoadVerts !Verts
               -- | LoadDyns !Dyns
+              deriving (Show,Eq)
 
 -- | commands for functionality at the lowest level
 data SysAction = SysRecreate | SysReload
