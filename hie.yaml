@@ -1,0 +1,7 @@
+cradle:
+  cabal:
+    - path: "src/Main.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/UPrelude.hs"
+      component: "paracletus:exe:paracletus"
