@@ -4,7 +4,8 @@ require "mod/base/game"
 function initMod ()
     -- basic UI elements
     -- initMenu ()
-    game.print("blop")
+    game.logDebug("default mod: initMod()")
 end
 function runMod ()
+    game.logDebug("default mod: runMod()")
 end

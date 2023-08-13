@@ -19,6 +19,12 @@ end
 
 game = game or {}
 
-function game.print(str)
+function game.logDebug(str)
     logDebug(1,str)
+end
+function game.logInfo(str)
+    logInfo(str)
+end
+function game.logError(str)
+    logError(str)
 end

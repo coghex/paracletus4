@@ -13,7 +13,7 @@ import Data.Time.Clock (diffUTCTime, getCurrentTime)
 import qualified HsLua as Lua
 import System.Directory (getDirectoryContents)
 import System.FilePath (combine)
-import Luau.Command ( hsExit, hsLogDebug )
+import Luau.Command ( hsExit, hsLogDebug, hsLogInfo, hsLogError )
 import Prog.Data ( Env(..), ChanName(..) )
 import Sign.Data
     ( Event(EventLog, EventSys),
@@ -39,11 +39,11 @@ luauThread env = do
       _ ← Lua.runWith ls $ do
         Lua.registerHaskellFunction (fromString "rawExit")         (hsExit         env)
         Lua.registerHaskellFunction (fromString "logDebug")        (hsLogDebug     env)
+        Lua.registerHaskellFunction (fromString "logInfo")         (hsLogInfo      env)
+        Lua.registerHaskellFunction (fromString "logError")        (hsLogError     env)
         Lua.openlibs
         _ ← Lua.dofile $ Just "mod/base/game.lua"
         Lua.invoke (fromString "initLuau") modFiles ∷ Lua.LuaE Lua.Exception Int
-      log' env (LogDebug 1) "loading mod files:"
-      log' env (LogDebug 1) $ " " ⧺ (show modFiles)
       luauLoop TStart env modFiles
 
 -- | the loop runs lua commands every loop

@@ -24,13 +24,12 @@ hsExit env = luaEvent env $ EventSys SysExit
 -- | logs at level n, 1 being -v, 3 being -vvv,
 --   0 being no verbosity whatsoever
 hsLogDebug ∷ Env → Int → String → Lua.Lua ()
-hsLogDebug env n str = luaEvent env $ EventLog (LogDebug n) str
+hsLogDebug env n str = luaEvent env $ EventLog (LogDebug n) $ "[Luau] " ⧺ str
 
 -- | logs info, should not be used in production code
 hsLogInfo ∷ Env → String → Lua.Lua ()
-hsLogInfo env str = luaEvent env $ EventLog LogInfo str
+hsLogInfo env str = luaEvent env $ EventLog LogInfo $ "[Luau] " ⧺ str
 
 -- | logs a string and ends the entire process and children
 hsLogError ∷ Env → String → Lua.Lua ()
-hsLogError env str = luaEvent env $ EventLog LogError str
-
+hsLogError env str = luaEvent env $ EventLog LogError $ "[Luau] " ⧺ str
