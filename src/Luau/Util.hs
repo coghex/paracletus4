@@ -4,6 +4,11 @@ import Prelude()
 import UPrelude
 import qualified HsLua as Lua
 import GHC.Stack ( HasCallStack )
+import Prog.Data ( Env(..), QueueName(..), QueueCmd(..) )
+import Sign.Data ( Event(..) )
+import Sign.Queue ( writeQueue )
+import Sign.Util ( findQueue )
+import Sign.Var ( atomically )
 
 -- | custom head so we can have errors
 vhead ∷ HasCallStack ⇒ [α] → Lua.Lua (Maybe α)
@@ -17,3 +22,10 @@ vtail a = if length a > 0 then return $ tail a
   else do
     Lua.liftIO $ print "LUAERROR: tail on empty string"
     return []
+
+-- | sends event to main thread
+luaEvent ∷ Env → Event → Lua.Lua ()
+luaEvent env event = do
+  case findQueue env EventQueue of
+    Nothing → Lua.liftIO $ print "LUAERROR: UNKNOWN EVENT QUEUE"
+    Just q0 → Lua.liftIO $ atomically $ writeQueue q0 $ QCEvent event

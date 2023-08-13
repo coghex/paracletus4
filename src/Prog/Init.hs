@@ -8,10 +8,11 @@ module Prog.Init
 import Prelude()
 import UPrelude
 import qualified Control.Monad.Logger.CallStack as Logger
-import Data ( Color(..) )
+import Data ( Color(..), FPS(..) )
 import Prog ( Prog(unProg) )
-import Prog.Data ( Env(..), State(..), ProgResult(..), QueueName(..),
-                   Queues(..), Chans(..), TVars(..))
+import Prog.Data ( Env(..), State(..), ProgResult(..), QueueName(..), ChanName(..),
+                   Queues(..), Chans(..), TVars(..), ReloadState(..), Settings(..),
+                   TVarName(..) )
 import Sign.Data ( Event(..), LoadCmd(..), InpCmd(..) )
 import Sign.Except ( ExType(ExProg), ProgExcept(ProgExcept) )
 import Sign.Queue ( newQueue, newTChan )
@@ -41,16 +42,26 @@ initEnv = do
   loadQ    ← newQueue
   -- input thread tracks the mouse and processes input
   inpQ     ← newQueue
+  -- channels that contain semaphores for each thread
+  luaCh    ← newTChan
+  -- vert TVar keeps verticies in a cache so when we only
+  -- recalculate if we explicitly ask for it
+  vertsTV  ← atomically $ newTVar Nothing
+  -- same for dynamic data, there will be lots of it
+  dynsTV   ← atomically $ newTVar Nothing
   let env = Env { envQueues = Queues queues3
-                , envChans  = Chans chans
-                , envTVars  = TVars tvars
+                , envChans  = Chans chans1
+                , envTVars  = TVars tvars2
                 , envLuaSt  = luaSt }
       queues0 = Map.empty
-      queues1 = Map.insert EventQueue eventQ queues0
-      queues2 = Map.insert LoadQueue  loadQ  queues1
-      queues3 = Map.insert InputQueue inpQ   queues2
-      chans  = Map.empty
-      tvars  = Map.empty
+      queues1 = Map.insert EventQueue eventQ  queues0
+      queues2 = Map.insert LoadQueue  loadQ   queues1
+      queues3 = Map.insert InputQueue inpQ    queues2
+      chans0  = Map.empty
+      chans1  = Map.insert LuaChan    luaCh   chans0
+      tvars0  = Map.empty
+      tvars1  = Map.insert VertsTVar  vertsTV tvars0
+      tvars2  = Map.insert DynsTVar   dynsTV  tvars1
   -- and env that can be accessed transactionally
   envChan ← atomically $ newTVar env
   -- we return both so that initState doesnt need to load the TVar
@@ -62,10 +73,19 @@ initEnv = do
 initState ∷ Env → IO (TVar State)
 initState _   = do
   -- the status handles errors
-  let ref = ProgExcept (Just ProgSuccess) ExProg ""
+  let ref      = ProgExcept (Just ProgSuccess) ExProg ""
+      settings = Settings $ Just 60
+  -- initial settings before we even check any files
   -- the logger provides multiple levels of warnings/info
   lf ← Logger.runStdoutLoggingT $ Logger.LoggingT pure
+  -- the system time marks the start of execution
+  st ← getSystemTime
   -- state is accessed transactionally
   atomically $ newTVar State { stStatus    = ref
                              , stLogFunc   = lf
-                             , stWindow    = Nothing }
+                             , stWindow    = Nothing
+                             , stReload    = RSNULL
+                             , stSettings  = settings
+                             , stStartT    = st
+                             , stFPS       = FPS 60.0 60 True
+                             , stTick      = Nothing }

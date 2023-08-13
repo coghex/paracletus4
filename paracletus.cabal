@@ -20,10 +20,14 @@ executable paracletus
                    Prog
                    Sign
                    Vulk
+                   Load.Data
                    Luau.Command
                    Luau.Data
                    Luau.Util
+                   Prog.Buff
                    Prog.Data
+                   Prog.Event
+                   Prog.Foreign
                    Prog.Init
                    Prog.Util
                    Sign.Data
@@ -32,7 +36,30 @@ executable paracletus
                    Sign.Thread
                    Sign.Util
                    Sign.Var
+                   Vulk.Atlas
+                   Vulk.Buff
+                   Vulk.Callback
+                   Vulk.Calc
+                   Vulk.Command
+                   Vulk.Data
+                   Vulk.Desc
+                   Vulk.Device
+                   Vulk.Font
+                   Vulk.Foreign
                    Vulk.GLFW
+                   Vulk.Instance
+                   Vulk.Pipeline
+                   Vulk.Pres
+                   Vulk.Shader
+                   Vulk.Sync
+                   Vulk.Texture
+                   Vulk.Trans
+                   Vulk.TH
+                   Vulk.Vertex
+                   Vulk.VulkData
+                   Vulk.VulkDraw
+                   Vulk.VulkGLFW
+                   Vulk.VulkLoad
     default-language: Haskell2010
     build-depends: base
                  , base-unicode-symbols

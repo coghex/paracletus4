@@ -15,10 +15,22 @@ import Sign.Data
 import Sign.Queue ( writeQueue )
 import Sign.Var ( atomically, readTVar )
 import Luau.Data ( Window(..), Page(..) )
-import Luau.Util ( vtail, vhead )
+import Luau.Util ( vtail, vhead, luaEvent )
 
 -- | quits everything using glfw
 hsExit ∷ Env → Lua.Lua ()
-hsExit env = return () -- Lua.liftIO $ atomically
- -- $ writeQueue (envEventQ env) $ EventSys SysExit
+hsExit env = luaEvent env $ EventSys SysExit
+
+-- | logs at level n, 1 being -v, 3 being -vvv,
+--   0 being no verbosity whatsoever
+hsLogDebug ∷ Env → Int → String → Lua.Lua ()
+hsLogDebug env n str = luaEvent env $ EventLog (LogDebug n) str
+
+-- | logs info, should not be used in production code
+hsLogInfo ∷ Env → String → Lua.Lua ()
+hsLogInfo env str = luaEvent env $ EventLog LogInfo str
+
+-- | logs a string and ends the entire process and children
+hsLogError ∷ Env → String → Lua.Lua ()
+hsLogError env str = luaEvent env $ EventLog LogError str
 

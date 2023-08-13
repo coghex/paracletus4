@@ -13,7 +13,7 @@ import Prog
 import Prog.Data (Env(..), State(..), QueueCmd(..), QueueName(..))
 import Prog.Util ( logCommand )
 import Sign.Data
-    ( Event(..), LogLevel(..) )
+    ( Event(..), LogLevel(..), SysAction(..) )
 import Sign.Except ( ExType(ExVulk) )
 import Sign.Var ( atomically, modifyTVar' )
 import Sign.Util ( tryReadQueue', log'')
@@ -33,5 +33,14 @@ processEvents = do
 processEvent ∷ QueueCmd → Prog ε σ ()
 processEvent (QCEvent event) = case event of
   EventLog level str → logCommand level str
+  EventSys sysEvent  → processSysEvent sysEvent
   _                  → log'' LogError $ "Unknown event: " ⧺ show event
 processEvent _               = return ()
+
+processSysEvent ∷ SysAction → Prog ε σ ()
+processSysEvent SysExit = do
+  st ← get
+  case stWindow st of
+    Just win → liftIO $ GLFW.setWindowShouldClose win True
+    Nothing  → liftIO exitSuccess
+processSysEvent event   = log'' LogWarn $ "Unknown sysaction: " ⧺ show event

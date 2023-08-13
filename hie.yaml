@@ -5,3 +5,135 @@ cradle:
 
     - path: "src/UPrelude.hs"
       component: "paracletus:exe:paracletus"
+
+    - path: "src/Data.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Luau.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Prog.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Sign.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Vulk.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Load/Data.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Luau/Command.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Luau/Data.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Luau/Util.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Prog/Data.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Prog/Event.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Prog/Foreign.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Prog/Init.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Prog/Util.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Sign/Data.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Sign/Except.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Sign/Queue.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Sign/Thread.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Sign/Util.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Sign/Var.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Vulk/Atlas.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Vulk/Buff.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Vulk/Callback.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Vulk/Calc.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Vulk/Command.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Vulk/Data.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Vulk/Desc.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Vulk/Device.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Vulk/Font.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Vulk/Foreign.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Vulk/GLFW.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Vulk/Instance.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Vulk/Pipeline.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Vulk/Pres.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Vulk/Shader.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Vulk/Sync.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Vulk/Texture.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Vulk/Trans.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Vulk/TH.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Vulk/Vertex.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Vulk/VulkData.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Vulk/VulkDraw.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Vulk/VulkGLFW.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Vulk/VulkLoad.hs"
+      component: "paracletus:exe:paracletus"
