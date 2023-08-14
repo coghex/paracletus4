@@ -48,8 +48,18 @@ tryReadQueue' env queue = case findQueue env queue of
   Just q0 → liftIO $ atomically $ tryReadQueue q0
 
 -- | writes to a queue in a prog context
-writeQueue' ∷ Env → QueueName → QueueCmd → Prog ε σ ()
-writeQueue' env name cmd = return ()
+writeQueue' ∷ QueueName → QueueCmd → Prog ε σ ()
+writeQueue' name cmd = do
+  env ← ask
+  case findQueue env name of
+    Nothing → log'' LogError $ "no queue " ⧺ show name
+    Just q0 → liftIO $ atomically $ writeQueue q0 cmd
+
+-- | writes to a queue in the io context
+writeQueue'' ∷ Env → QueueName → QueueCmd → IO ()
+writeQueue'' env name cmd = case findQueue env name of
+  Nothing → log' env LogError $ "no queue " ⧺ show name
+  Just q0 → atomically $ writeQueue q0 cmd
 
 -- | finds a specified TState chan
 findChan ∷ Env → ChanName → Maybe (TChan TState)

@@ -41,7 +41,7 @@ data QueueName = EventQueue | LoadQueue
                | InputQueue | CustomQueue Int deriving (Show, Eq, Ord)
 -- | dynamic collection of chans
 data Chans     = Chans { cm ∷ Map ChanName (TChan TState) }
-data ChanName  = LuaChan | CustomChan Int deriving (Show, Eq, Ord)
+data ChanName  = LuaChan | InputChan | CustomChan Int deriving (Show, Eq, Ord)
 -- | dynamic collection of tvars
 data TVars     = TVars { tm ∷ Map TVarName (TVar (Maybe TVarValue)) }
 data TVarValue = TVInt Int | TVString String | TVVerts Verts | TVDyns Dyns

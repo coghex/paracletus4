@@ -33,3 +33,7 @@ hsLogInfo env str = luaEvent env $ EventLog LogInfo $ "[Luau] " ⧺ str
 -- | logs a string and ends the entire process and children
 hsLogError ∷ Env → String → Lua.Lua ()
 hsLogError env str = luaEvent env $ EventLog LogError $ "[Luau] " ⧺ str
+
+-- | reads the settings for the input keys
+hsRegisterInputKeys ∷ Env → Lua.Lua ()
+hsRegisterInputKeys env = luaEvent env $ EventLog LogInfo "INPUTREGISTER"

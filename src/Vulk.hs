@@ -23,8 +23,9 @@ import Prog.Buff ( generateDynData )
 import Prog.Data ( State(..), ReloadState(..), LoopControl(..)
                  , TVarName(..), TVarValue(..) )
 import Prog.Event ( processEvents )
-import Prog.Util ( logInfo, logDebug, logError, logExcept, loop, getTime )
+import Prog.Input ( inputThread )
 import Prog.Foreign ( mallocRes, newArrayRes )
+import Prog.Util ( logInfo, logDebug, logError, logExcept, loop, getTime )
 import Sign.Except ( testEx, ExType(ExVulk) )
 import Sign.Var
     ( atomically, modifyTVar', newTVar, readTVar, writeTVar )
@@ -124,6 +125,7 @@ runVulk = do
       logDebug "forking lua interpreter..."
       env ← ask
       _ ← liftIO $ forkIO $ luauThread env
+      _ ← liftIO $ forkIO $ inputThread env window
       -- window size change handling
       let beforeSwapchainCreation ∷ Prog ε σ ()
           beforeSwapchainCreation =
