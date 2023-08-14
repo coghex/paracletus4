@@ -13,7 +13,7 @@ import Data.Time.Clock (diffUTCTime, getCurrentTime)
 import qualified HsLua as Lua
 import System.Directory (getDirectoryContents)
 import System.FilePath (combine)
-import Luau.Command ( hsExit, hsLogDebug, hsLogInfo, hsLogError, hsRegisterInputKeys )
+import Luau.Command
 import Prog.Data ( Env(..), ChanName(..) )
 import Sign.Data
     ( Event(EventLog, EventSys),
@@ -37,12 +37,17 @@ luauThread env = do
       log' env (LogDebug 1) modFiles
       let ls = envLuaSt env
       _ ← Lua.runWith ls $ do
-        Lua.registerHaskellFunction (fromString "rawExit")  (hsExit         env)
-        Lua.registerHaskellFunction (fromString "logDebug") (hsLogDebug     env)
-        Lua.registerHaskellFunction (fromString "logInfo")  (hsLogInfo      env)
-        Lua.registerHaskellFunction (fromString "logError") (hsLogError     env)
+        Lua.registerHaskellFunction (fromString "rawExit")    (hsExit         env)
+        Lua.registerHaskellFunction (fromString "logDebug")   (hsLogDebug     env)
+        Lua.registerHaskellFunction (fromString "logInfo")    (hsLogInfo      env)
+        Lua.registerHaskellFunction (fromString "logError")   (hsLogError     env)
+        Lua.registerHaskellFunction (fromString "rawNewTile") (hsNewTile      env)
         Lua.registerHaskellFunction
-          (fromString "rawRegisterInputKeys")          (hsRegisterInputKeys env)
+          (fromString "rawRegisterInputKeys")          (hsRegisterInputKeys  env)
+        Lua.registerHaskellFunction
+          (fromString "rawRegisterTileMap")            (hsRegisterTileMap    env)
+        Lua.registerHaskellFunction
+          (fromString "rawRegisterTextureMap")         (hsRegisterTextureMap env)
         Lua.openlibs
         _ ← Lua.dofile $ Just "mod/base/game.lua"
         Lua.invoke (fromString "initLuau") modFiles ∷ Lua.LuaE Lua.Exception Int

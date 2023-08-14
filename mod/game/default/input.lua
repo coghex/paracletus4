@@ -19,5 +19,5 @@ function initInput ()
     return 0
 end
 
-keySetts = { keyEscape = "ESC"
+keySetts = { keyEscape = "ESC,CAP"
            , keyTest   = "T" }

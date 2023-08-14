@@ -24,6 +24,7 @@ import Sign.Var ( atomically, readTVar, writeTVar, modifyTVar' )
 import Sign.Queue
     ( readChan, tryReadChan, tryReadQueue, writeQueue )
 import Sign.Util ( readChan', writeQueue'', log' )
+import Control.Monad ( when )
 import Control.Concurrent (threadDelay)
 import Data.Time.Clock (diffUTCTime, getCurrentTime)
 import System.IO ( openFile, hGetContents, hClose, IOMode(..) )
@@ -70,7 +71,7 @@ processInputQueue env is = do
           return is
     Nothing → return is
 
-processInput ∷ Env → InputState → InpCmd → IO (EventResult)
+processInput ∷ Env → InputState → InpCmd → IO EventResult
 processInput env is (InpEvent (InputKey win key k ks mk)) = do
   processKey env key ks mk is
   return EventResultSuccess
@@ -101,12 +102,11 @@ processKey env key ks mk is = do
   log' env (LogDebug 1) $ "processing key " ⧺ show key
   let keyFunc = lookupKey keymap key
       keymap = keyMap is
-  if ks ≡ GLFW.KeyState'Pressed then case keyFunc of
+  when (ks ≡ GLFW.KeyState'Pressed) $ case keyFunc of
       KFEscape → do
         log' env (LogDebug 1) "sending quit command"
         writeQueue'' env EventQueue $ QCEvent $ EventSys SysExit
       keyFunc → return ()
-  else return ()
 
 createKeyMap ∷ KeySettings → KeyMap
 createKeyMap (KeySettings kEscape kTest) = km

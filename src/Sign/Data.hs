@@ -4,6 +4,7 @@ module Sign.Data where
 import Prelude()
 import UPrelude
 import Data ( PrintArg(..), KeyMap(..), KeyFunc(..) )
+import Load.Data ( Tile )
 import qualified Data.Map as Map
 import qualified Vulk.GLFW as GLFW
 
@@ -29,9 +30,14 @@ data Event = EventError !GLFW.Error !String -- GLFW specific
            | EventSys !SysAction
            deriving (Show, Eq)
 
-data LoadCmd = LoadCmdNULL deriving (Show, Eq)
+data LoadCmd = LoadTile Tile | LoadState LoadStateChange
+             | LoadCmdNULL deriving (Show, Eq)
 data InpCmd  = InpEvent InputEvent | InpState InputStateChange
              | InpCmdNULL  deriving (Show, Eq)
+
+-- | possible changes to the load state
+data LoadStateChange = LSCRegisterTileMap String | LSCRegisterTextureMap String
+                     | LSCNULL deriving (Show, Eq)
 
 -- | log levels are for monadic logger, but stdio
 data LogLevel = LogDebug Int

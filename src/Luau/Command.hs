@@ -10,11 +10,12 @@ import Numeric ( readHex )
 import Text.Read ( readMaybe )
 import Prog.Data ( Env(..), QueueName(..), QueueCmd(..) )
 import Sign.Data
-    ( Event(EventSys, EventLog), LogLevel(..), InputStateChange(..)
-    , SysAction(SysReload, SysExit, SysRecreate), InpCmd(..) )
+    ( Event(EventSys, EventLog), LogLevel(..), InputStateChange(..), LoadCmd(..)
+    , SysAction(SysReload, SysExit, SysRecreate), InpCmd(..), LoadStateChange(..) )
 import Sign.Queue ( writeQueue )
 import Sign.Var ( atomically, readTVar )
 import Sign.Util ( writeQueue'' )
+import Load.Data ( Tile(..) )
 import Luau.Data ( Window(..), Page(..) )
 import Luau.Util ( vtail, vhead, luaEvent )
 
@@ -39,3 +40,17 @@ hsLogError env str = luaEvent env $ EventLog LogError $ "[Luau] " ⧺ str
 hsRegisterInputKeys ∷ Env → String → Lua.Lua ()
 hsRegisterInputKeys env str = Lua.liftIO $ writeQueue'' env InputQueue
   $ QCInpCmd $ InpState (ISCRegisterKeys str)
+-- | reads the settings for the input keys
+hsRegisterTileMap ∷ Env → String → Lua.Lua ()
+hsRegisterTileMap env str = Lua.liftIO $ writeQueue'' env LoadQueue
+  $ QCLoadCmd $ LoadState (LSCRegisterTileMap str)
+-- | reads the settings for the input keys
+hsRegisterTextureMap ∷ Env → String → Lua.Lua ()
+hsRegisterTextureMap env str = Lua.liftIO $ writeQueue'' env LoadQueue
+  $ QCLoadCmd $ LoadState (LSCRegisterTextureMap str)
+
+-- | creates a new tile
+hsNewTile ∷ Env → Double → Double → Double → Double → String → Lua.Lua ()
+hsNewTile env x y w h t = Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadTile tile
+  where tile = Tile (x,y) (w,h) (tix,tiy) (tw,th) ti
+        (tix,tiy,tw,th,ti) = (0,0,0,0,0) -- findTile t

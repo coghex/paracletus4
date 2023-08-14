@@ -31,3 +31,9 @@ end
 function game.registerInputKeys(str)
     rawRegisterInputKeys(str)
 end
+function game.registerTileMap(str)
+    rawRegisterTileMap(str)
+end
+function game.registerTextureMap(str)
+    rawRegisterTextureMap(str)
+end
