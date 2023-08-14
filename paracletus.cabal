@@ -16,6 +16,7 @@ executable paracletus
     hs-source-dirs: src
     other-modules: UPrelude
                    Data
+                   Load
                    Luau
                    Prog
                    Sign
@@ -33,6 +34,7 @@ executable paracletus
                    Prog.Util
                    Sign.Data
                    Sign.Except
+                   Sign.Log
                    Sign.Queue
                    Sign.Thread
                    Sign.Util

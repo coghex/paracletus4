@@ -17,7 +17,8 @@ import Graphics.Vulkan.Core_1_0
 import Graphics.Vulkan.Ext.VK_KHR_swapchain
 import Data ( Color(Color), FPS(..) )
 import Luau ( luauThread )
-import Load.Data ( Dyns(..), Tile(..) )
+import Load ( loadThread )
+import Load.Data ( DynData(..), Tile(..), TilePos(..), TileTex(..) )
 import Prog ( MonadIO(liftIO), Prog, MonadError(catchError), MonadReader(ask) )
 import Prog.Buff ( generateDynData )
 import Prog.Data ( State(..), ReloadState(..), LoopControl(..)
@@ -128,6 +129,8 @@ runVulk = do
       _ ← liftIO $ forkIO $ luauThread env
       _ ← liftIO $ forkIO $ inputThread env window
       writeChan' env InputChan TStart
+      _ ← liftIO $ forkIO $ loadThread env
+      writeChan' env LoadChan TStart
       -- window size change handling
       let beforeSwapchainCreation ∷ Prog ε σ ()
           beforeSwapchainCreation =
@@ -247,10 +250,10 @@ vulkLoop (VulkanLoopData (GQData pdev dev commandPool _) queues scsd0
         -- main loop runs draw loop and trans functions
         env ← ask
         dynData' ← readTVar' env DynsTVar
-        let Dyns dynData = case dynData' of
-                             Nothing          → Dyns []
-                             Just (TVDyns d0) → d0
-                             Just _           → Dyns []
+        let dynData = case dynData' of
+                         Nothing          → []
+                         Just (TVDyns d0) → d0
+                         Just _           → []
             nDynsData    = length dynData
             cam = (0,0,-1)
             rdata = RenderData { dev
@@ -351,7 +354,10 @@ genCommandBuffs dev pdev commandPool queues graphicsPipeline renderPass
         logDebug "generating verticies"
         let res   = calcVertices tiles
             (w,h) = (fromIntegral w'/64.0,fromIntegral h'/64.0)
-            tiles = [Tile (0,0) (w,h) (0,0) (1,1) 0, Tile (0,0) (1,1) (0,0) (1,1) 1]
+            tiles = [Tile (TilePos (0,0) (w,h))
+                          (TileTex (0,0) (1,1) 0)
+                    ,Tile (TilePos (0,0) (1,1))
+                          (TileTex (0,0) (1,1) 1)]
             dyns  = generateDynData tiles
         writeTVar' env DynsTVar $ TVDyns dyns
         writeTVar' env VertsTVar $ TVVerts $ Verts res

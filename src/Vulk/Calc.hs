@@ -13,7 +13,7 @@ import UPrelude
 import Graphics.Vulkan.Core_1_0 ( Word32 )
 import Numeric.DataFrame
 import Data ( Color(..) )
-import Load.Data ( Tile(..) )
+import Load.Data ( Tile(..), TilePos(..), TileTex(..) )
 import Vulk.Atlas ( indexAtlas )
 import Vulk.Vertex
     ( atLeastThree, Vertex(..) )
@@ -43,8 +43,8 @@ vertices ∷ [Tile] → DataFrame Vertex '[XN 0]
 vertices ts = fromList $ combineVertices (1∷Int) ts
   where combineVertices _    [] = []
         combineVertices nDyn
-          ((Tile (x',y') (xscale',yscale')
-          (ax',ay') (sx,sy) t'):tts)
+          ((Tile (TilePos (x',y') (xscale',yscale'))
+          (TileTex (ax',ay') (sx,sy) t')):tts)
             = withColor (withMove (+ vec3 1 dyn moves')
               (withTC (indexAtlas ax ay sx sy) (withTC (+ vec3 0 0 t)
               (withPos (+ vec4 x0 y0 0 0)

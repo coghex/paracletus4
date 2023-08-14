@@ -15,7 +15,7 @@ import Sign.Data
 import Sign.Queue ( writeQueue )
 import Sign.Var ( atomically, readTVar )
 import Sign.Util ( writeQueue'' )
-import Load.Data ( Tile(..) )
+import Load.Data ( Tile(..), TilePos(..), TileTex(..) )
 import Luau.Data ( Window(..), Page(..) )
 import Luau.Util ( vtail, vhead, luaEvent )
 
@@ -52,5 +52,5 @@ hsRegisterTextureMap env str = Lua.liftIO $ writeQueue'' env LoadQueue
 -- | creates a new tile
 hsNewTile ∷ Env → Double → Double → Double → Double → String → Lua.Lua ()
 hsNewTile env x y w h t = Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadTile tile
-  where tile = Tile (x,y) (w,h) (tix,tiy) (tw,th) ti
+  where tile = Tile (TilePos (x,y) (w,h)) (TileTex (tix,tiy) (tw,th) ti)
         (tix,tiy,tw,th,ti) = (0,0,0,0,0) -- findTile t

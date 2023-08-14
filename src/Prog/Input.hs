@@ -17,8 +17,8 @@ import Prog.Data
     , ChanName(..), QueueCmd(..) )
 import Prog.Util ( tryReadInputQueue )
 import Sign.Data
-    ( Event(..), LogLevel(..), EventResult(..),
-      SysAction(..), TState(..), InpCmd(..), InputEvent(..)
+    ( Event(..), LogLevel(..), EventResult(..), LoadCmd(..)
+    , SysAction(..), TState(..), InpCmd(..), InputEvent(..)
     , SettingsChange(..), InputState(..), InputStateChange(..) )
 import Sign.Var ( atomically, readTVar, writeTVar, modifyTVar' )
 import Sign.Queue
@@ -99,13 +99,15 @@ readKeySettings env path = do
 
 processKey ∷ Env → GLFW.Key → GLFW.KeyState → GLFW.ModifierKeys → InputState → IO ()
 processKey env key ks mk is = do
-  log' env (LogDebug 1) $ "processing key " ⧺ show key
   let keyFunc = lookupKey keymap key
       keymap = keyMap is
+  --log' env (LogDebug 1) $ "processing key " ⧺ show key ⧺ ", function: " ⧺ show keyFunc
   when (ks ≡ GLFW.KeyState'Pressed) $ case keyFunc of
       KFEscape → do
         log' env (LogDebug 1) "sending quit command"
         writeQueue'' env EventQueue $ QCEvent $ EventSys SysExit
+      KFTest → do
+        writeQueue'' env LoadQueue $ QCLoadCmd LoadTest
       keyFunc → return ()
 
 createKeyMap ∷ KeySettings → KeyMap

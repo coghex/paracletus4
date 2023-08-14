@@ -9,6 +9,9 @@ cradle:
     - path: "src/Data.hs"
       component: "paracletus:exe:paracletus"
 
+    - path: "src/Load.hs"
+      component: "paracletus:exe:paracletus"
+
     - path: "src/Luau.hs"
       component: "paracletus:exe:paracletus"
 
@@ -58,6 +61,9 @@ cradle:
       component: "paracletus:exe:paracletus"
 
     - path: "src/Sign/Except.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Sign/Log.hs"
       component: "paracletus:exe:paracletus"
 
     - path: "src/Sign/Queue.hs"

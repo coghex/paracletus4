@@ -69,6 +69,7 @@ getGLFWKey "RGT" = Key'Right
 getGLFWKey "UPP" = Key'Up
 getGLFWKey "DWN" = Key'Down
 getGLFWKey "SH"  = Key'GraveAccent
+getGLFWKey "T"   = Key'T
 getGLFWKey "C"   = Key'C
 getGLFWKey "E"   = Key'E
 getGLFWKey "R"   = Key'R

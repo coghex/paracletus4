@@ -7,15 +7,13 @@ import UPrelude
 import Data ( Color(..) )
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Load.Data ( Tile(..), DynData(..), Dyns(..) )
+import Load.Data ( Tile(..), DynData(..), TilePos(..), TileTex(..) )
 import Vulk.Trans ( texDynDataFrame, dynDataFrame )
 
-generateDynData ∷ [Tile] → Dyns
-generateDynData tiles = Dyns $ generateDynData' tiles
-generateDynData' ∷ [Tile] → [DynData]
-generateDynData' [] = []
-generateDynData' ((Tile (x,y) (w,h) texi texs tex):ts)
-  = DynData dataF texDF : generateDynData' ts
+generateDynData ∷ [Tile] → [DynData]
+generateDynData [] = []
+generateDynData ((Tile (TilePos (x,y) (w,h)) (TileTex texi texs tex)):ts)
+  = DynData dataF texDF : generateDynData ts
       where dataF = dynDataFrame pos scale
             texDF = texDynDataFrame (Color 255 255 255 255) texi tex
             pos   = (realToFrac x,realToFrac y)

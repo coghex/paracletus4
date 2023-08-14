@@ -6,7 +6,7 @@ module Prog.Data where
 import Prelude()
 import UPrelude
 import qualified Control.Monad.Logger.CallStack as Logger
-import Load.Data ( Dyns )
+import Load.Data ( DynData )
 import Sign.Data ( TState, Event(..), LoadCmd(..), InpCmd(..) )
 import Sign.Except ( ProgExcept )
 import Sign.Queue ( Queue, TChan )
@@ -35,16 +35,18 @@ data Env = Env { envQueues ∷ Queues
 
 -- | dynamic collection of queues
 data Queues    = Queues { qm ∷ Map QueueName (Queue QueueCmd) }
-data QueueCmd  = QCEvent Event | QCLoadCmd LoadCmd | QCInpCmd InpCmd
+data QueueCmd  = QCEvent Event | QCLoadCmd LoadCmd
+               | QCInpCmd InpCmd deriving (Show, Eq)
 -- | some queues are required, others can be added
 data QueueName = EventQueue | LoadQueue
                | InputQueue | CustomQueue Int deriving (Show, Eq, Ord)
 -- | dynamic collection of chans
 data Chans     = Chans { cm ∷ Map ChanName (TChan TState) }
-data ChanName  = LuaChan | InputChan | CustomChan Int deriving (Show, Eq, Ord)
+data ChanName  = LuaChan | InputChan | LoadChan
+               | CustomChan Int deriving (Show, Eq, Ord)
 -- | dynamic collection of tvars
 data TVars     = TVars { tm ∷ Map TVarName (TVar (Maybe TVarValue)) }
-data TVarValue = TVInt Int | TVString String | TVVerts Verts | TVDyns Dyns
+data TVarValue = TVInt Int | TVString String | TVVerts Verts | TVDyns [DynData]
 data TVarName  = WindowTVar | VertsTVar | DynsTVar
                | CustomTVar Int deriving (Show, Eq, Ord)
 

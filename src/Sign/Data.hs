@@ -4,7 +4,7 @@ module Sign.Data where
 import Prelude()
 import UPrelude
 import Data ( PrintArg(..), KeyMap(..), KeyFunc(..) )
-import Load.Data ( Tile )
+import Load.Data ( Tile, DrawState )
 import qualified Data.Map as Map
 import qualified Vulk.GLFW as GLFW
 
@@ -15,6 +15,10 @@ data TState = TStart | TStop | TPause | TNULL deriving (Show, Eq)
 data EventResult = EventResultSuccess
                  | EventResultInputState InputState
                  | EventResultError String deriving (Show, Eq)
+-- | load command results
+data LoadResult = LoadResultSuccess
+                | LoadResultDrawState DrawState
+                | LoadResultError String deriving (Show, Eq)
 
 -- | events processed by the main thread
 data Event = EventError !GLFW.Error !String -- GLFW specific
@@ -31,7 +35,7 @@ data Event = EventError !GLFW.Error !String -- GLFW specific
            deriving (Show, Eq)
 
 data LoadCmd = LoadTile Tile | LoadState LoadStateChange
-             | LoadCmdNULL deriving (Show, Eq)
+             | LoadTest | LoadCmdNULL deriving (Show, Eq)
 data InpCmd  = InpEvent InputEvent | InpState InputStateChange
              | InpCmdNULL  deriving (Show, Eq)
 
