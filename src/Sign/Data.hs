@@ -4,10 +4,16 @@ module Sign.Data where
 import Prelude()
 import UPrelude
 import Data ( PrintArg(..), KeyMap(..), KeyFunc(..) )
+import qualified Data.Map as Map
 import qualified Vulk.GLFW as GLFW
 
 -- | timer state is used for all the timers
 data TState = TStart | TStop | TPause | TNULL deriving (Show, Eq)
+
+-- | return state for a threaded command event
+data EventResult = EventResultSuccess
+                 | EventResultInputState InputState
+                 | EventResultError String deriving (Show, Eq)
 
 -- | events processed by the main thread
 data Event = EventError !GLFW.Error !String -- GLFW specific
@@ -19,14 +25,13 @@ data Event = EventError !GLFW.Error !String -- GLFW specific
            | EventLoad !LoadData
            -- | changes to the settings
            | EventSettings !SettingsChange
-           -- | changes to the state of the input
-           | EventInputState !InputStateChange
            -- | lowest level actions go here
            | EventSys !SysAction
            deriving (Show, Eq)
 
 data LoadCmd = LoadCmdNULL deriving (Show, Eq)
-data InpCmd  = InpCmdNULL  deriving (Show, Eq)
+data InpCmd  = InpEvent InputEvent | InpState InputStateChange
+             | InpCmdNULL  deriving (Show, Eq)
 
 -- | log levels are for monadic logger, but stdio
 data LogLevel = LogDebug Int
@@ -45,12 +50,11 @@ data InputEvent
   | InputMouseScroll !GLFW.Window !Double !Double
   deriving (Show, Eq)
 
--- | input state can be changed by sending event
-data InputStateChange = ISCKeyPress !KeyFunc
-                      | ISCKeyRelease !KeyFunc
-                      | ISCAccelerate !(Double,Double)
-                      | ISCResetCam
-                      | ISCNULL deriving (Show, Eq)
+-- | possible changes to the input state
+data InputStateChange = ISCRegisterKeys String | ISCNULL deriving (Show, Eq)
+
+-- | input state is simply the state of the input thread
+data InputState = InputState { keyMap ∷ KeyMap } deriving (Show, Eq)
 
 -- | data gets loaded in from a seperate thread
 data LoadData = LoadData-- LoadVerts !Verts

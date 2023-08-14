@@ -47,6 +47,12 @@ tryReadQueue' env queue = case findQueue env queue of
   Nothing → return Nothing
   Just q0 → liftIO $ atomically $ tryReadQueue q0
 
+-- | reads a queue in IO
+tryReadQueue'' ∷ Env → QueueName → IO (Maybe QueueCmd)
+tryReadQueue'' env queue = case findQueue env queue of
+  Nothing → return Nothing
+  Just q0 → atomically $ tryReadQueue q0
+
 -- | writes to a queue in a prog context
 writeQueue' ∷ QueueName → QueueCmd → Prog ε σ ()
 writeQueue' name cmd = do

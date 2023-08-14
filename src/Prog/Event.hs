@@ -13,10 +13,10 @@ import Prog
 import Prog.Data (Env(..), State(..), QueueCmd(..), QueueName(..))
 import Prog.Util ( logCommand )
 import Sign.Data
-    ( Event(..), LogLevel(..), SysAction(..) )
+    ( Event(..), LogLevel(..), SysAction(..), InpCmd(..) )
 import Sign.Except ( ExType(ExVulk) )
 import Sign.Var ( atomically, modifyTVar' )
-import Sign.Util ( tryReadQueue', log'')
+import Sign.Util ( tryReadQueue', writeQueue', log'')
 
 -- | reads event channel, then exectutes events recursively
 processEvents ∷ Prog ε σ ()
@@ -32,9 +32,10 @@ processEvents = do
 --   since we want as little work as possible here
 processEvent ∷ QueueCmd → Prog ε σ ()
 processEvent (QCEvent event) = case event of
-  EventLog level str → logCommand level str
-  EventSys sysEvent  → processSysEvent sysEvent
-  _                  → log'' LogError $ "Unknown event: " ⧺ show event
+  EventLog level str  → logCommand level str
+  EventSys sysEvent   → processSysEvent sysEvent
+  EventInput inpEvent → writeQueue' InputQueue $ QCInpCmd $ InpEvent inpEvent
+  _                   → log'' LogError $ "Unknown event: " ⧺ show event
 processEvent _               = return ()
 
 processSysEvent ∷ SysAction → Prog ε σ ()

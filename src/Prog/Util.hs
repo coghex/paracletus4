@@ -20,16 +20,18 @@ import GHC.Stack ( HasCallStack, prettyCallStack, callStack )
 import Graphics.Vulkan ( Int64 )
 import System.Exit ( ExitCode(ExitSuccess) )
 import Sign ( checkStatus )
-import Sign.Data ( LogLevel(..) )
+import Sign.Data ( LogLevel(..), TState(..), InpCmd(..) )
 import Sign.Except ( ExType, Exceptable, ProgExcept(ProgExcept) )
 import Sign.Var ( atomically, newTVar, readTVar )
+import Sign.Util (log', readChan', tryReadQueue'')
 import Prog
     ( MonadIO(liftIO)
     , MonadError(throwError)
     , MonadState(get)
     , Prog(..)
     , Prog' )
-import Prog.Data ( LoopControl(ContinueLoop), State(stStartT) )
+import Prog.Data ( LoopControl(ContinueLoop), State(stStartT), Env(..), ChanName(..)
+                 , QueueCmd(..), QueueName(..))
 
 -- logging functions
 
@@ -41,6 +43,28 @@ logCommand LogError     = logError
 logCommand LogWarn      = logWarn
 logCommand _            = logInfo'
   where logInfo' str = logInfo $ "unknown log type: " ⧺ str
+
+-- | reads the input channel
+readInputChan ∷ Env → IO TState
+readInputChan env = do
+    tsNew' ← readChan' env InputChan
+    case tsNew' of
+      Nothing → do
+        log' env LogError "[Input] no input channel"
+        return TNULL
+      Just t0 → return t0
+
+tryReadInputQueue ∷ Env → IO (Maybe InpCmd)
+tryReadInputQueue env = do
+  inpQ ← tryReadQueue'' env InputQueue
+  case inpQ of
+    Just (QCInpCmd inpCmd) → return $ Just inpCmd
+    Just _                 → do
+      log' env LogError
+        "[Input] silly rabbit, input queue is for input commands"
+      return Nothing
+    Nothing                → return Nothing
+
 
 -- | for c functions that have to run in the main
 --   thread for as long as the program runs

@@ -8,12 +8,13 @@ import Data.List.Split (splitOn)
 import Data.Maybe ( fromMaybe )
 import Numeric ( readHex )
 import Text.Read ( readMaybe )
-import Prog.Data ( Env(..) )
+import Prog.Data ( Env(..), QueueName(..), QueueCmd(..) )
 import Sign.Data
-    ( Event(EventSys, EventLog), LogLevel(..),
-      SysAction(SysReload, SysExit, SysRecreate) )
+    ( Event(EventSys, EventLog), LogLevel(..), InputStateChange(..)
+    , SysAction(SysReload, SysExit, SysRecreate), InpCmd(..) )
 import Sign.Queue ( writeQueue )
 import Sign.Var ( atomically, readTVar )
+import Sign.Util ( writeQueue'' )
 import Luau.Data ( Window(..), Page(..) )
 import Luau.Util ( vtail, vhead, luaEvent )
 
@@ -35,5 +36,6 @@ hsLogError ∷ Env → String → Lua.Lua ()
 hsLogError env str = luaEvent env $ EventLog LogError $ "[Luau] " ⧺ str
 
 -- | reads the settings for the input keys
-hsRegisterInputKeys ∷ Env → Lua.Lua ()
-hsRegisterInputKeys env = luaEvent env $ EventLog LogInfo "INPUTREGISTER"
+hsRegisterInputKeys ∷ Env → String → Lua.Lua ()
+hsRegisterInputKeys env str = Lua.liftIO $ writeQueue'' env InputQueue
+  $ QCInpCmd $ InpState (ISCRegisterKeys str)

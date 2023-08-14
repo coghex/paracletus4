@@ -28,6 +28,6 @@ end
 function game.logError(str)
     logError(str)
 end
-function game.registerInputKeys()
-    rawRegisterInputKeys()
+function game.registerInputKeys(str)
+    rawRegisterInputKeys(str)
 end

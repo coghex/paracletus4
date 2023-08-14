@@ -33,6 +33,9 @@ cradle:
     - path: "src/Luau/Util.hs"
       component: "paracletus:exe:paracletus"
 
+    - path: "src/Prog/Buff.hs"
+      component: "paracletus:exe:paracletus"
+
     - path: "src/Prog/Data.hs"
       component: "paracletus:exe:paracletus"
 
@@ -43,6 +46,9 @@ cradle:
       component: "paracletus:exe:paracletus"
 
     - path: "src/Prog/Init.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Prog/Input.hs"
       component: "paracletus:exe:paracletus"
 
     - path: "src/Prog/Util.hs"

@@ -5,6 +5,7 @@ module Data where
 import Prelude()
 import Data.Map (Map)
 import UPrelude
+import qualified Graphics.UI.GLFW as GLFW
 
 -- | stack is a simple stack with pop/stash
 type Stack α = [α]
@@ -81,137 +82,137 @@ data Popup = Popup { puPos  ∷ (Double,Double)
                    , puType ∷ PopupType } deriving (Show, Eq)
 
 -- different pop ups have different functionality
-data PopupType = PopupSetKey Int KeyFunc [Key]
+data PopupType = PopupSetKey Int KeyFunc [GLFW.Key]
                | PopupSavename String
                | PopupNULL deriving (Show, Eq)
 
 
 -- | possible keys, so we dont have to use the GLFW one everywhere
-data Key = KeyA
-         | KeyB
-         | KeyC
-         | KeyD
-         | KeyE
-         | KeyF
-         | KeyG
-         | KeyH
-         | KeyI
-         | KeyJ
-         | KeyK
-         | KeyL
-         | KeyM
-         | KeyN
-         | KeyO
-         | KeyP
-         | KeyQ
-         | KeyR
-         | KeyS
-         | KeyT
-         | KeyU
-         | KeyV
-         | KeyW
-         | KeyX
-         | KeyY
-         | KeyZ
-         | KeyUp
-         | KeyLeft
-         | KeyDown
-         | KeyRight
-         | KeyTilde
-         | Key1
-         | Key2
-         | Key3
-         | Key4
-         | Key5
-         | Key6
-         | Key7
-         | Key8
-         | Key9
-         | Key0
-         | KeyMinus
-         | KeyEqual
-         | KeyBackspace
-         | KeyTab
-         | KeyBrackLeft
-         | KeyBrackRight
-         | KeyPipe
-         | KeyCaps
-         | KeyColon
-         | KeyQuote
-         | KeyReturn
-         | KeyComma
-         | KeyPeriod
-         | KeySlash
-         | KeySpace
-         | KeyEscape
-         | KeyNum0
-         | KeyNum1
-         | KeyNum2
-         | KeyNum3
-         | KeyNum4
-         | KeyNum5
-         | KeyNum6
-         | KeyNum7
-         | KeyNum8
-         | KeyNum9
-         | KeyNumDot
-         | KeyNumDiv
-         | KeyNumMul
-         | KeyNumSub
-         | KeyNumAdd
-         | KeyNumRet
-         | KeyNumEql
-         | KeyF1
-         | KeyF2
-         | KeyF3
-         | KeyF4
-         | KeyF5
-         | KeyF6
-         | KeyF7
-         | KeyF8
-         | KeyF9
-         | KeyF10
-         | KeyF11
-         | KeyF12
-         | KeyF13
-         | KeyF14
-         | KeyF15
-         | KeyF16
-         | KeyF17
-         | KeyF18
-         | KeyF19
-         | KeyF20
-         | KeyF21
-         | KeyF22
-         | KeyF23
-         | KeyF24
-         | KeyF25
-         | KeyLShift
-         | KeyLCtrl
-         | KeyLAlt
-         | KeyLSuper
-         | KeyRShift
-         | KeyRCtrl
-         | KeyRAlt
-         | KeyRSuper
-         | KeyInsert
-         | KeyDelete
-         | KeyPageUp
-         | KeyPageDown
-         | KeyHome
-         | KeyEnd
-         | KeyScrLk
-         | KeyNumLk
-         | KeyPrtSc
-         | KeyPause
-         | KeyMenu
-         | KeyUnknown String
-         | KeyNULL deriving (Show, Eq, Ord)
+--data Key = KeyA
+--         | KeyB
+--         | KeyC
+--         | KeyD
+--         | KeyE
+--         | KeyF
+--         | KeyG
+--         | KeyH
+--         | KeyI
+--         | KeyJ
+--         | KeyK
+--         | KeyL
+--         | KeyM
+--         | KeyN
+--         | KeyO
+--         | KeyP
+--         | KeyQ
+--         | KeyR
+--         | KeyS
+--         | KeyT
+--         | KeyU
+--         | KeyV
+--         | KeyW
+--         | KeyX
+--         | KeyY
+--         | KeyZ
+--         | KeyUp
+--         | KeyLeft
+--         | KeyDown
+--         | KeyRight
+--         | KeyTilde
+--         | Key1
+--         | Key2
+--         | Key3
+--         | Key4
+--         | Key5
+--         | Key6
+--         | Key7
+--         | Key8
+--         | Key9
+--         | Key0
+--         | KeyMinus
+--         | KeyEqual
+--         | KeyBackspace
+--         | KeyTab
+--         | KeyBrackLeft
+--         | KeyBrackRight
+--         | KeyPipe
+--         | KeyCaps
+--         | KeyColon
+--         | KeyQuote
+--         | KeyReturn
+--         | KeyComma
+--         | KeyPeriod
+--         | KeySlash
+--         | KeySpace
+--         | KeyEscape
+--         | KeyNum0
+--         | KeyNum1
+--         | KeyNum2
+--         | KeyNum3
+--         | KeyNum4
+--         | KeyNum5
+--         | KeyNum6
+--         | KeyNum7
+--         | KeyNum8
+--         | KeyNum9
+--         | KeyNumDot
+--         | KeyNumDiv
+--         | KeyNumMul
+--         | KeyNumSub
+--         | KeyNumAdd
+--         | KeyNumRet
+--         | KeyNumEql
+--         | KeyF1
+--         | KeyF2
+--         | KeyF3
+--         | KeyF4
+--         | KeyF5
+--         | KeyF6
+--         | KeyF7
+--         | KeyF8
+--         | KeyF9
+--         | KeyF10
+--         | KeyF11
+--         | KeyF12
+--         | KeyF13
+--         | KeyF14
+--         | KeyF15
+--         | KeyF16
+--         | KeyF17
+--         | KeyF18
+--         | KeyF19
+--         | KeyF20
+--         | KeyF21
+--         | KeyF22
+--         | KeyF23
+--         | KeyF24
+--         | KeyF25
+--         | KeyLShift
+--         | KeyLCtrl
+--         | KeyLAlt
+--         | KeyLSuper
+--         | KeyRShift
+--         | KeyRCtrl
+--         | KeyRAlt
+--         | KeyRSuper
+--         | KeyInsert
+--         | KeyDelete
+--         | KeyPageUp
+--         | KeyPageDown
+--         | KeyHome
+--         | KeyEnd
+--         | KeyScrLk
+--         | KeyNumLk
+--         | KeyPrtSc
+--         | KeyPause
+--         | KeyMenu
+--         | KeyUnknown String
+--         | KeyNULL deriving (Show, Eq, Ord)
 
 -- | a mapping from key functionality to none or more
 --   physical keys.  used in the child threads so can be lazy.
 --   hlint suggests newtype here
-newtype KeyMap = KeyMap (Map KeyFunc [Key]) deriving (Show,Eq,Ord)
+newtype KeyMap = KeyMap (Map KeyFunc [GLFW.Key]) deriving (Show,Eq,Ord)
 
 -- | ADTs for the key layouts each KeyFunc
 --   corresponds to none or many physical Keys
