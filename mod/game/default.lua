@@ -1,11 +1,14 @@
 -- defines the basic game
 require "mod/base/game"
 require "mod/base/json"
+require "mod/game/default/menu"
+require "mod/game/default/input"
 -- this runs once at the beginning
 function initMod ()
     -- basic UI elements
-    -- initMenu ()
     game.logDebug("default mod: initMod()")
+    initInput ()
+    initMenu ()
 end
 function runMod ()
     game.logDebug("default mod: runMod()")

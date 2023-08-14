@@ -29,6 +29,7 @@ executable paracletus
                    Prog.Event
                    Prog.Foreign
                    Prog.Init
+                   Prog.Input
                    Prog.Util
                    Sign.Data
                    Sign.Except
