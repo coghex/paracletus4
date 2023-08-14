@@ -6,6 +6,7 @@ module Vulk.GLFW
   , keyCheck
   , numCheck
   , calcInpKey
+  , getGLFWKeys
   , mousebutt1
   , mousebutt2
   , mousebutt3
@@ -18,6 +19,7 @@ module Vulk.GLFW
 import Prelude()
 import UPrelude
 import Data.Char (toUpper,toLower)
+import Data.List.Split ( splitOn )
 import qualified Data as P
 import Graphics.UI.GLFW
 
@@ -53,9 +55,11 @@ mousebutt3 = MouseButton'3
 --mousebutt8 = GLFW.MouseButton'8
 
 -- | translates keys from strings for ease of use
--- | TODO: delete this
+getGLFWKeys ∷ String → [Key]
+getGLFWKeys str = map getGLFWKey $ splitOn "," str
 getGLFWKey ∷ String → Key
 getGLFWKey "ESC" = Key'Escape
+getGLFWKey "CAP" = Key'CapsLock
 getGLFWKey "RET" = Key'Enter
 getGLFWKey "DEL" = Key'Backspace
 getGLFWKey "SPC" = Key'Space

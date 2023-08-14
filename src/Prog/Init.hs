@@ -44,13 +44,14 @@ initEnv = do
   inpQ     ← newQueue
   -- channels that contain semaphores for each thread
   luaCh    ← newTChan
+  inpCh    ← newTChan
   -- vert TVar keeps verticies in a cache so when we only
   -- recalculate if we explicitly ask for it
   vertsTV  ← atomically $ newTVar Nothing
   -- same for dynamic data, there will be lots of it
   dynsTV   ← atomically $ newTVar Nothing
   let env = Env { envQueues = Queues queues3
-                , envChans  = Chans chans1
+                , envChans  = Chans chans2
                 , envTVars  = TVars tvars2
                 , envLuaSt  = luaSt }
       queues0 = Map.empty
@@ -59,6 +60,7 @@ initEnv = do
       queues3 = Map.insert InputQueue inpQ    queues2
       chans0  = Map.empty
       chans1  = Map.insert LuaChan    luaCh   chans0
+      chans2  = Map.insert InputChan  inpCh   chans1
       tvars0  = Map.empty
       tvars1  = Map.insert VertsTVar  vertsTV tvars0
       tvars2  = Map.insert DynsTVar   dynsTV  tvars1

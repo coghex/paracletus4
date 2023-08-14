@@ -32,8 +32,14 @@ processEvents = do
 --   since we want as little work as possible here
 processEvent ∷ QueueCmd → Prog ε σ ()
 processEvent (QCEvent event) = case event of
-  EventLog level str  → logCommand level str
   EventSys sysEvent   → processSysEvent sysEvent
+  EventSys SysExit    → do
+    logCommand (LogDebug 1) "quitting..."
+    st ← get
+    case stWindow st of
+      Just win → liftIO $ GLFW.setWindowShouldClose win True
+      Nothing  → liftIO exitSuccess
+  EventLog level str  → logCommand level str
   EventInput inpEvent → writeQueue' InputQueue $ QCInpCmd $ InpEvent inpEvent
   _                   → log'' LogError $ "Unknown event: " ⧺ show event
 processEvent _               = return ()

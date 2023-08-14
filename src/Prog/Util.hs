@@ -16,7 +16,7 @@ import qualified Control.Monad.Logger.CallStack as LoggerCS
 import Data.String (fromString)
 import Data.Time.Clock.System
     ( SystemTime(systemNanoseconds, systemSeconds), getSystemTime )
-import GHC.Stack ( HasCallStack, prettyCallStack, callStack )
+import GHC.Stack ( HasCallStack, prettyCallStack, callStack, withFrozenCallStack )
 import Graphics.Vulkan ( Int64 )
 import System.Exit ( ExitCode(ExitSuccess) )
 import Sign ( checkStatus )
@@ -36,23 +36,13 @@ import Prog.Data ( LoopControl(ContinueLoop), State(stStartT), Env(..), ChanName
 -- logging functions
 
 -- | logs the data based on its level
-logCommand ∷ LogLevel → String → Prog ε σ ()
-logCommand (LogDebug _) = logDebug
-logCommand LogInfo      = logInfo
+logCommand ∷ HasCallStack ⇒ LogLevel → String → Prog ε σ ()
+logCommand (LogDebug _) = withFrozenCallStack logDebug
+logCommand LogInfo      = withFrozenCallStack logInfo
 logCommand LogError     = logError
-logCommand LogWarn      = logWarn
-logCommand _            = logInfo'
+logCommand LogWarn      = withFrozenCallStack logWarn
+logCommand _            = withFrozenCallStack logInfo'
   where logInfo' str = logInfo $ "unknown log type: " ⧺ str
-
--- | reads the input channel
-readInputChan ∷ Env → IO TState
-readInputChan env = do
-    tsNew' ← readChan' env InputChan
-    case tsNew' of
-      Nothing → do
-        log' env LogError "[Input] no input channel"
-        return TNULL
-      Just t0 → return t0
 
 tryReadInputQueue ∷ Env → IO (Maybe InpCmd)
 tryReadInputQueue env = do
@@ -175,7 +165,7 @@ logWarn = LoggerCS.logWarnCS callStack ∘ fromString
 {-# INLINE logWarn #-}
 -- | logError is telling the user something is impossible
 logError ∷ HasCallStack ⇒ String → Prog ε σ ()
-logError = LoggerCS.logErrorCS callStack ∘ fromString
+logError msg = LoggerCS.logErrorCS callStack ∘ fromString $ msg ⧺ "\n" ⧺ prettyCallStack callStack ⧺ "\n"
 {-# INLINE logError #-}
 -- | logExcept will actually kill the whole program and print a callstack
 logExcept ∷ (Exceptable ς, HasCallStack)

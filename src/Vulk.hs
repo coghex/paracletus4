@@ -21,15 +21,16 @@ import Load.Data ( Dyns(..), Tile(..) )
 import Prog ( MonadIO(liftIO), Prog, MonadError(catchError), MonadReader(ask) )
 import Prog.Buff ( generateDynData )
 import Prog.Data ( State(..), ReloadState(..), LoopControl(..)
-                 , TVarName(..), TVarValue(..) )
+                 , TVarName(..), TVarValue(..), ChanName(..) )
 import Prog.Event ( processEvents )
 import Prog.Input ( inputThread )
 import Prog.Foreign ( mallocRes, newArrayRes )
 import Prog.Util ( logInfo, logDebug, logError, logExcept, loop, getTime )
+import Sign.Data ( TState(..) )
 import Sign.Except ( testEx, ExType(ExVulk) )
 import Sign.Var
     ( atomically, modifyTVar', newTVar, readTVar, writeTVar )
-import Sign.Util ( readTVar', writeTVar' )
+import Sign.Util ( readTVar', writeTVar', writeChan' )
 import Vulk.Buff ( createIndexBuffer, createVertexBuffer )
 import Vulk.Command ( createCommandPool )
 import Vulk.Calc ( calcVertices )
@@ -126,6 +127,7 @@ runVulk = do
       env ← ask
       _ ← liftIO $ forkIO $ luauThread env
       _ ← liftIO $ forkIO $ inputThread env window
+      writeChan' env InputChan TStart
       -- window size change handling
       let beforeSwapchainCreation ∷ Prog ε σ ()
           beforeSwapchainCreation =

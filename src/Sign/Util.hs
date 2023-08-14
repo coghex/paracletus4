@@ -11,7 +11,8 @@ import Prog.Data
   , TVars(..), TVarName(..), TVarValue(..) )
 import Sign.Data (LogLevel(..), Event (EventLog), TState(..) )
 import Sign.Var (TVar(..), atomically, newTVar, readTVar, writeTVar)
-import Sign.Queue (newQueue, writeQueue, tryReadQueue, tryReadChan, Queue(..), TChan(..))
+import Sign.Queue (newQueue, writeQueue, tryReadQueue, tryReadChan,
+                   writeChan, Queue(..), TChan(..))
 import qualified Data.Map as M
 
 -- | when a thread logs something we take the callstack and
@@ -58,7 +59,7 @@ writeQueue' ∷ QueueName → QueueCmd → Prog ε σ ()
 writeQueue' name cmd = do
   env ← ask
   case findQueue env name of
-    Nothing → log'' LogError $ "no queue " ⧺ show name
+    Nothing → log'' LogWarn $ "no queue " ⧺ show name
     Just q0 → liftIO $ atomically $ writeQueue q0 cmd
 
 -- | writes to a queue in the io context
@@ -77,6 +78,12 @@ readChan' ∷ Env → ChanName → IO (Maybe (TState))
 readChan' env chan = case findChan env chan of
   Nothing → return Nothing
   Just c0 → atomically $ tryReadChan c0
+
+-- | writes a chan in prog state
+writeChan' ∷ Env → ChanName → TState → Prog ε σ ()
+writeChan' env name state = case findChan env name of
+  Nothing → log'' LogWarn $ "no channel" ⧺ show name
+  Just c0 → liftIO $ atomically $ writeChan c0 state
 
 -- | finds a specified TVar
 findTVar ∷ Env → TVarName → Maybe (TVar (Maybe TVarValue))

@@ -11,11 +11,11 @@ import qualified Data.Aeson as A
 import Data.Maybe ( fromMaybe )
 import Data.String ( fromString )
 import qualified Data.Map as Map
-import Luau.Data ( KeySettings )
+import Luau.Data ( InputJson(..), KeySettings(..) )
 import Prog.Data
     ( Env(..), QueueName(..)
-    , ChanName(..) )
-import Prog.Util ( readInputChan, tryReadInputQueue )
+    , ChanName(..), QueueCmd(..) )
+import Prog.Util ( tryReadInputQueue )
 import Sign.Data
     ( Event(..), LogLevel(..), EventResult(..),
       SysAction(..), TState(..), InpCmd(..), InputEvent(..)
@@ -33,15 +33,16 @@ import qualified Vulk.GLFW as GLFW
 inputThread ∷ Env → GLFW.Window → IO ()
 inputThread env win = do
   log' env (LogDebug 1) "[Input] starting input thread..."
-  runInputLoop env win TStart initInputState
+  runInputLoop env win TStop initInputState
 runInputLoop ∷ Env → GLFW.Window → TState → InputState → IO ()
 runInputLoop env win TStop  is = do
-  tsNew ← readInputChan env
-  runInputLoop env win tsNew is
+  tsNew ← readChan' env InputChan
+  case tsNew of
+    Nothing  → runInputLoop env win TStop is
+    Just ts0 → runInputLoop env win ts0   is
 runInputLoop env win TStart is = do
   start ← getCurrentTime
-  tsNew ← readInputChan env
-  processInputQueue env is
+  newstate ← processInputQueue env is
   end ← getCurrentTime
   let diff  = diffUTCTime end start
       usecs = floor (toRational diff * 1000000) ∷ Int
@@ -49,25 +50,32 @@ runInputLoop env win TStart is = do
   if delay > 0
     then threadDelay delay
     else return ()
-  runInputLoop env win tsNew is
+  tsNew ← readChan' env InputChan
+  case tsNew of
+    Nothing  → runInputLoop env win TStart newstate
+    Just ts0 → runInputLoop env win ts0    newstate
 runInputLoop _ _ _ _ = return ()
 
-processInputQueue ∷ Env → InputState → IO ()
+processInputQueue ∷ Env → InputState → IO (InputState)
 processInputQueue env is = do
   rawInp ← tryReadInputQueue env
   case rawInp of
     Just inp → do
       ret ← processInput env is inp
       case ret of
-        EventResultSuccess → processInputQueue env is
-        EventResultError s → log' env LogError $ "[Input] " ⧺ s
-    Nothing → return ()
+        EventResultInputState s0 → processInputQueue env s0
+        EventResultSuccess       → processInputQueue env is
+        EventResultError s       → do
+          log' env LogError $ "[Input] " ⧺ s
+          return is
+    Nothing → return is
 
 processInput ∷ Env → InputState → InpCmd → IO (EventResult)
 processInput env is (InpEvent (InputKey win key k ks mk)) = do
-  processKey key ks mk is
+  processKey env key ks mk is
   return EventResultSuccess
 processInput env is (InpState (ISCRegisterKeys path))     = do
+  log' env (LogDebug 1) "registering keys..."
   keyM ← readKeySettings env path
   let is' = is { keyMap = keyM }
   return $ EventResultInputState is'
@@ -78,22 +86,33 @@ readKeySettings ∷ Env → String → IO KeyMap
 readKeySettings env path = do
   inputSettingsFile ← openFile path ReadMode
   contents          ← hGetContents inputSettingsFile
-  hClose inputSettingsFile
   let keySettings = A.decode $ fromString contents
   case keySettings of
-    Just k0 → return $ createKeyMap k0
+    Just (InputJson k0) → do
+      hClose inputSettingsFile
+      return $ createKeyMap k0
     Nothing → do
       log' env LogError $ "[Input] error decoding " ⧺ path
+      hClose inputSettingsFile
       return $ KeyMap Map.empty
 
-processKey ∷ GLFW.Key → GLFW.KeyState → GLFW.ModifierKeys → InputState → IO ()
-processKey key ks mk is = do
+processKey ∷ Env → GLFW.Key → GLFW.KeyState → GLFW.ModifierKeys → InputState → IO ()
+processKey env key ks mk is = do
+  log' env (LogDebug 1) $ "processing key " ⧺ show key
   let keyFunc = lookupKey keymap key
       keymap = keyMap is
-  return ()
+  if ks ≡ GLFW.KeyState'Pressed then case keyFunc of
+      KFEscape → do
+        log' env (LogDebug 1) "sending quit command"
+        writeQueue'' env EventQueue $ QCEvent $ EventSys SysExit
+      keyFunc → return ()
+  else return ()
 
 createKeyMap ∷ KeySettings → KeyMap
-createKeyMap ks = KeyMap Map.empty
+createKeyMap (KeySettings kEscape kTest) = km
+  where km         = KeyMap km1
+        km0        = Map.insert KFEscape (GLFW.getGLFWKeys kEscape) Map.empty
+        km1        = Map.insert KFTest   (GLFW.getGLFWKeys kTest)   km0
 
 initInputState ∷ InputState
 initInputState = InputState { keyMap = KeyMap Map.empty }
