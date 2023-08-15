@@ -37,3 +37,6 @@ end
 function game.registerTextureMap(str)
     rawRegisterTextureMap(str)
 end
+function game.reload()
+    rawReload()
+end

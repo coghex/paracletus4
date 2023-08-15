@@ -27,6 +27,9 @@ cradle:
     - path: "src/Load/Data.hs"
       component: "paracletus:exe:paracletus"
 
+    - path: "src/Load/Util.hs"
+      component: "paracletus:exe:paracletus"
+
     - path: "src/Luau/Command.hs"
       component: "paracletus:exe:paracletus"
 

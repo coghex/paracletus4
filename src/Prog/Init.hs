@@ -90,6 +90,7 @@ initState _   = do
                              , stWindow    = Nothing
                              , stReload    = RSNULL
                              , stSettings  = settings
+                             , stTextures  = []
                              , stStartT    = st
                              , stFPS       = FPS 60.0 60 True
                              , stTick      = Nothing }

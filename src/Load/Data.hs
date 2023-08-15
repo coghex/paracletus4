@@ -42,18 +42,18 @@ data DrawState = DrawState
 --   us to return results of deeply nested
 --   pure functions
 data DSStatus = DSSExit
+              | DSSReload
               | DSSNULL deriving (Show, Eq)
 
 -- | mapping from image files to texture information
-newtype TextureMap = TextureMap (Map String Tex) deriving (Show,Eq,Ord)
+newtype TextureMap = TextureMap { textures ∷ [(String,Tex)] } deriving (Show,Eq,Ord)
 
 data Tex = Tex { tfp   ∷ String
+               , tI    ∷ Int
                , tsize ∷ (Int,Int) } deriving (Show, Eq, Ord)
 
-data TextureData = TextureData { fp ∷ String
-                               , w  ∷ Int
-                               , h  ∷ Int
-                               , t  ∷ Int } deriving (Generic, Show, Eq)
+data TextureData = TextureData { name ∷ String
+                               , fp   ∷ String } deriving (Generic, Show, Eq)
 
 data InTexJson   = InTexJson   { textureData ∷ [TextureData] } deriving (Generic, Show)
 instance FromJSON InTexJson where
@@ -67,12 +67,10 @@ instance ToJSON   InTexJson where
 
 instance FromJSON TextureData where
   parseJSON = withObject "textureData" $ \v -> TextureData
-        <$> v .: "fp"
-        <*> v .: "w"
-        <*> v .: "h"
-        <*> v .: "t"
+        <$> v .: "name"
+        <*> v .: "fp"
 instance ToJSON   TextureData where
-    toJSON (TextureData fp w h t) =
-        object ["fp" .= fp, "w" .= w, "h" .= h, "t" .= t]
-    toEncoding (TextureData fp w h t) =
-        pairs ("fp" .= fp <> "w" .= w <> "h" .= h <> "t" .= t)
+    toJSON (TextureData name fp) =
+        object ["name" .= name, "fp" .= fp]
+    toEncoding (TextureData name fp) =
+        pairs ("name" .= name <> "fp" .= fp)

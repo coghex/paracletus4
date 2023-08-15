@@ -10,6 +10,7 @@ import Control.Monad.IO.Class
 import Control.Monad.Morph
 import Control.Monad.Reader
 import System.Log.FastLogger
+import Load.Data ( DynData(..), TextureMap(..), Tex(..) )
 import Prog.Data ( Env(..), ChanName(..), QueueName(..), QueueCmd(..) )
 import Sign.Data ( LogLevel(..), Event(..), TState(..), LoadCmd(..)
                  , SysAction(..), LoadData(..), SettingsChange(..) )
@@ -17,6 +18,7 @@ import Sign.Var ( atomically, readTVar )
 import Sign.Queue ( writeQueue, readChan, tryReadChan )
 import Sign.Util ( readChan', writeQueue'', tryReadQueue'' )
 import Vulk.Font (TTFData(..))
+import Vulk.Data (Verts(..))
 import qualified Vulk.GLFW as GLFW
 
 -- | monadic boilerplate logger from simple-log package on hackage
@@ -113,3 +115,19 @@ readCommand = do
     Just badloadcmd      → do
       log' LogError $ "bad load command " ⧺ show badloadcmd
       return Nothing
+
+-- | sends a syscommand over the event queue
+sendSys ∷ (MonadLog μ, MonadFail μ) ⇒ SysAction → μ ()
+sendSys sa = do
+  (Log _   env _   _   _) ← askLog
+  liftIO $ writeQueue'' env EventQueue $ QCEvent $ EventSys sa
+-- | sends a load event over the event queue
+sendLoadEvent ∷ (MonadLog μ, MonadFail μ) ⇒ Verts → [DynData] → μ ()
+sendLoadEvent verts dyns = do
+  (Log _   env _   _   _) ← askLog
+  liftIO $ writeQueue'' env EventQueue $ QCEvent $ EventLoad $ LoadData verts dyns
+-- | sends the list of textures to the event queue
+sendTextures ∷ (MonadLog μ, MonadFail μ) ⇒ [(String,Tex)] → μ ()
+sendTextures tm = do
+  (Log _   env _   _   _) ← askLog
+  liftIO $ writeQueue'' env EventQueue $ QCEvent $ EventTextures $ map (tfp ⊚ snd) tm

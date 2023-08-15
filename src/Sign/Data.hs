@@ -4,7 +4,8 @@ module Sign.Data where
 import Prelude()
 import UPrelude
 import Data ( PrintArg(..), KeyMap(..), KeyFunc(..) )
-import Load.Data ( Tile, DrawState )
+import Load.Data ( Tile, DrawState, TilePos, DynData(..), TextureMap(..) )
+import Vulk.Data ( Verts(..) )
 import qualified Data.Map as Map
 import qualified Vulk.GLFW as GLFW
 
@@ -28,14 +29,16 @@ data Event = EventError !GLFW.Error !String -- GLFW specific
            | EventInput !InputEvent
            -- | verticies, indicies, and dynamic data from the load thread
            | EventLoad !LoadData
+           -- | texture fp list from the load thread
+           | EventTextures ![String]
            -- | changes to the settings
            | EventSettings !SettingsChange
            -- | lowest level actions go here
            | EventSys !SysAction
            deriving (Show, Eq)
 
-data LoadCmd = LoadTile Tile | LoadState LoadStateChange
-             | LoadTest | LoadCmdNULL deriving (Show, Eq)
+data LoadCmd = LoadTile TilePos String | LoadState LoadStateChange
+             | LoadReload | LoadTest | LoadCmdNULL deriving (Show, Eq)
 data InpCmd  = InpEvent InputEvent | InpState InputStateChange
              | InpCmdNULL  deriving (Show, Eq)
 
@@ -67,9 +70,7 @@ data InputStateChange = ISCRegisterKeys String | ISCNULL deriving (Show, Eq)
 data InputState = InputState { keyMap ∷ KeyMap } deriving (Show, Eq)
 
 -- | data gets loaded in from a seperate thread
-data LoadData = LoadData-- LoadVerts !Verts
-              -- | LoadDyns !Dyns
-              deriving (Show,Eq)
+data LoadData = LoadData !Verts ![DynData] deriving (Show,Eq)
 
 -- | commands for functionality at the lowest level
 data SysAction = SysRecreate | SysReload

@@ -65,6 +65,8 @@ data State = State { stStatus   ∷ ProgExcept
                    , stReload   ∷ !ReloadState
                    -- | state of user settings
                    , stSettings ∷ !Settings
+                   -- | the list of textures by fp loaded from outside
+                   , stTextures ∷ ![String]
                    -- | variables for FPS calculation
                    , stStartT   ∷ !SystemTime
                    , stFPS      ∷ !FPS

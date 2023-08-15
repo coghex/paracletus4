@@ -1,1 +1,1 @@
-{"textureData":[{"fp":"dat/tex/alpha.png","h":1,"t":1,"w":1},{"fp":"dat/tex/texture.jpg","h":1,"t":1,"w":1}]}
+{"textureData":[{"fp":"dat/tex/alpha.png","name":"alphaTile"},{"fp":"dat/tex/texture.jpg","name":"grecoTile"},{"fp":"dat/tex/grayscale.png","name":"grayscaleTile"}]}

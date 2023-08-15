@@ -19,6 +19,7 @@ import Data ( Color(Color), FPS(..) )
 import Luau ( luauThread )
 import Load ( loadThread )
 import Load.Data ( DynData(..), Tile(..), TilePos(..), TileTex(..) )
+import Load.Util ( emptyTiles )
 import Prog ( MonadIO(liftIO), Prog, MonadError(catchError), MonadReader(ask) )
 import Prog.Buff ( generateDynData )
 import Prog.Data ( State(..), ReloadState(..), LoopControl(..)
@@ -122,7 +123,7 @@ runVulk = do
       logDebug "loading system textures..."
       imgIndexPtr ← mallocRes
       let gqdata = GQData pdev dev commandPool (graphicsQueue queues)
-      texData ← loadVulkanTextures gqdata ["dat/tex/grayscale.png", "dat/tex/texture.jpg"]
+      texData ← loadVulkanTextures gqdata ["dat/tex/grayscale.png"]
       -- child threads go here
       logDebug "forking lua interpreter..."
       env ← ask
@@ -143,11 +144,12 @@ runVulk = do
           logDebug "loading swapchain..."
           beforeSwapchainCreation
           recr ← gets stReload
+          texs ← gets stTextures
           case recr of
             RSRecreate → do
               -- load textures
               logDebug "recreating vulkan..."
-              newTexData ← loadVulkanTextures gqdata ["dat/tex/grayscale.png"]
+              newTexData ← loadVulkanTextures gqdata texs
               modify $ \s → s { stReload = RSNULL
                               , stTick   = Just firstTick }
               let vulkLoopData' = VulkanLoopData {..}
@@ -326,7 +328,8 @@ vulkLoop (VulkanLoopData (GQData pdev dev commandPool _) queues scsd0
                             _          → False
       sizeChangedOutside ← liftIO
         $ atomically $ readTVar windowSizeChanged
-      return $ if shouldLoad then AbortLoop else ContinueLoop
+      return $ if shouldLoad ∨ stateRecreate ∨ sizeChangedOutside
+               then AbortLoop else ContinueLoop
     return $ if shouldExit then AbortLoop else ContinueLoop
 
 -- | command buffers contain all of the work we want to do each frame
@@ -376,7 +379,3 @@ genCommandBuffs dev pdev commandPool queues graphicsPipeline renderPass
     createCommandBuffers dev graphicsPipeline commandPool renderPass
       (pipelineLayout texData) swapInfo vertexBufferNew
       (dfLen inds0, indexBufferNew) framebuffers descriptorSets
-
-emptyTiles ∷ Int → [Tile]
-emptyTiles n = take n $ repeat $ Tile (TilePos (0,0) (1,1))
-                                      (TileTex (0,0) (1,1) 0)

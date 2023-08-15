@@ -19,5 +19,6 @@ function initTextures ()
 end
 
 texm = {}
-texm[1] = { fp = "dat/tex/alpha.png",w = 1,h = 1 }
-texm[2] = { fp = "dat/tex/texture.jpg",w = 1,h = 1 }
+texm[1] = { name = "alphaTile",fp = "dat/tex/alpha.png" }
+texm[2] = { name = "grecoTile",fp = "dat/tex/texture.jpg" }
+texm[3] = { name = "grayscaleTile",fp = "dat/tex/grayscale.png" }

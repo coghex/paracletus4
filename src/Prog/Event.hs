@@ -10,13 +10,14 @@ import System.Exit (exitSuccess)
 import qualified Vulk.GLFW as GLFW
 import Prog
     ( MonadIO(liftIO), Prog, MonadReader(ask), MonadState(get) )
-import Prog.Data (Env(..), State(..), QueueCmd(..), QueueName(..))
+import Prog.Data (Env(..), State(..), ReloadState(..), QueueCmd(..), QueueName(..),
+                  TVarName(..), TVarValue(..))
 import Prog.Util ( logCommand )
 import Sign.Data
-    ( Event(..), LogLevel(..), SysAction(..), InpCmd(..) )
+    ( Event(..), LogLevel(..), SysAction(..), InpCmd(..), LoadData(..) )
 import Sign.Except ( ExType(ExVulk) )
 import Sign.Var ( atomically, modifyTVar' )
-import Sign.Util ( tryReadQueue', writeQueue', log'')
+import Sign.Util ( tryReadQueue', writeQueue', log'', writeTVar')
 
 -- | reads event channel, then exectutes events recursively
 processEvents ∷ Prog ε σ ()
@@ -32,22 +33,23 @@ processEvents = do
 --   since we want as little work as possible here
 processEvent ∷ QueueCmd → Prog ε σ ()
 processEvent (QCEvent event) = case event of
-  EventSys sysEvent   → processSysEvent sysEvent
+  EventSys SysReload  → modify $ \s → s { stReload = RSReload }
   EventSys SysExit    → do
     logCommand (LogDebug 1) "quitting..."
     st ← get
     case stWindow st of
       Just win → liftIO $ GLFW.setWindowShouldClose win True
       Nothing  → liftIO exitSuccess
+  EventSys sysEvent   → log'' LogWarn $ "Unknown sysaction: " ⧺ show event
   EventLog level str  → logCommand level str
   EventInput inpEvent → writeQueue' InputQueue $ QCInpCmd $ InpEvent inpEvent
+  EventLoad (LoadData verts dyns) → do
+    env ← ask
+    writeTVar' env DynsTVar $ TVDyns dyns
+    writeTVar' env VertsTVar $ TVVerts verts
+    modify $ \s → s { stReload = RSReload }
+  EventTextures texmap → do
+    modify $ \s → s { stTextures = texmap
+                    , stReload   = RSRecreate }
   _                   → log'' LogError $ "Unknown event: " ⧺ show event
 processEvent _               = return ()
-
-processSysEvent ∷ SysAction → Prog ε σ ()
-processSysEvent SysExit = do
-  st ← get
-  case stWindow st of
-    Just win → liftIO $ GLFW.setWindowShouldClose win True
-    Nothing  → liftIO exitSuccess
-processSysEvent event   = log'' LogWarn $ "Unknown sysaction: " ⧺ show event

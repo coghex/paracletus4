@@ -16,10 +16,13 @@ import Data.List.Split ( splitOn )
 import Data.Map as Map
 import Data.String ( fromString )
 import Load.Data
+import Load.Util ( emptyTiles )
 import Luau.Data ( Window(..), Page(..) )
 import Prog.Data
+import Prog.Buff ( generateDynData )
 import Sign.Data
 import Sign.Log
+import Vulk.Calc ( calcVertices )
 import Vulk.Data ( Verts(Verts) )
 import Control.Concurrent (threadDelay)
 import Control.Monad.IO.Class ( liftIO, MonadIO(..) )
@@ -68,7 +71,19 @@ processCommands ds = do
       case ret of
         -- if command success keep processing commands
         LoadResultSuccess       → processCommands ds
-        LoadResultDrawState ds' → processCommands ds'
+        LoadResultDrawState ds' → case dsStatus ds' of
+          DSSExit   → do
+            sendSys SysExit
+            return ds'
+          -- sends the verts and dyns to the main thread
+          DSSReload → do
+            log' (LogDebug 1) "regenerating verts and dyns"
+            let verts = Verts $ calcVertices $ emptyTiles $ length tiles
+                tiles = dsTiles ds
+                dyns  = generateDynData tiles
+            sendLoadEvent verts dyns
+            processCommands ds' { dsStatus = DSSNULL }
+          DSSNULL   → processCommands ds'
         LoadResultError str     → do
           log' LogError $ "load command error: " ⧺ str
           return ds
@@ -84,14 +99,27 @@ processCommand ∷ (MonadLog μ,MonadFail μ)
 processCommand ds cmd = case cmd of
   LoadState (LSCRegisterTextureMap fp) → do
     log' (LogDebug 1) "registering texture map..."
-    tm ← readTextureMap fp
-    return $ LoadResultDrawState $ ds { dsTexMap = tm }
+    TextureMap tm ← readTextureMap fp
+    sendTextures tm
+    return $ LoadResultDrawState $ ds { dsTexMap = TextureMap tm }
   LoadTest → do
     let tm = dsTexMap ds
     log' (LogDebug 1) $ "texMap: " ⧺ show tm
     return $ LoadResultSuccess
+  LoadTile tilePos t → do
+    let TextureMap tm = dsTexMap ds
+        tile          = Tile tilePos tt
+        tt            = findTex t tm
+    return $ LoadResultDrawState ds { dsTiles  = tile : (dsTiles ds) }
+  LoadReload → do
+    return $ LoadResultDrawState ds { dsStatus = DSSReload }
   _ → return LoadResultSuccess
 
+findTex ∷ String → [(String,Tex)] → TileTex
+findTex n [] = TileTex (0,0) (1,1) 0
+findTex n ((name,(Tex fp ind size)):texs)
+  | n ≡ name  = TileTex (0,0) size ind
+  | otherwise = findTex n texs
 
 -- | reads the texture data file
 readTextureMap ∷ (MonadLog μ, MonadFail μ)
@@ -103,22 +131,21 @@ readTextureMap path = do
   case textureMap of
     Just (InTexJson k0) → do
       liftIO $ hClose inputSettingsFile
-      let texMap = createTextureMap k0
+      let texMap = createTextureMap 0 k0
       return $ TextureMap texMap
     Nothing → do
       log' LogError $ "[Input] error decoding " ⧺ path
       liftIO $ hClose inputSettingsFile
-      return $ TextureMap Map.empty
+      return $ TextureMap []
 
 -- | turns the list into a map
-createTextureMap ∷ [TextureData] → Map.Map String Tex
-createTextureMap []       = Map.empty
-createTextureMap ((TextureData fp w h t):tds)
-  = Map.insert fp' texdat $ createTextureMap tds
-    where texdat = Tex fp (w,h)
-          fp'    = last $ splitOn "/" fp
-
+createTextureMap ∷ Int → [TextureData] → [(String,Tex)]
+createTextureMap _ []       = []
+createTextureMap n ((TextureData name fp):tds)
+  = texdat : createTextureMap (n+1) tds
+    where texdat = (name, Tex fp n (1,1))
 
 -- | initial draw state
 initDrawState ∷ DrawState
-initDrawState = DrawState DSSNULL (TextureMap Map.empty) [] []
+initDrawState = DrawState DSSNULL (TextureMap []) [] []
+

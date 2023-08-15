@@ -22,6 +22,7 @@ executable paracletus
                    Sign
                    Vulk
                    Load.Data
+                   Load.Util
                    Luau.Command
                    Luau.Data
                    Luau.Util

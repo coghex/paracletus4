@@ -21,6 +21,7 @@ data VulkResult = VulkSuccess | VulkError | GLFWError deriving (Show, Eq)
 --   which is probably a good idea since newtypes are strict
 newtype Verts = Verts ( DataFrame Vertex '[XN 0]
                       , DataFrame Word32 '[XN 3])
+                      deriving (Show, Eq)
 
 -- | all the data required for a set of textures
 data TextureData = TextureData

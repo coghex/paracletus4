@@ -51,6 +51,9 @@ hsRegisterTextureMap env str = Lua.liftIO $ writeQueue'' env LoadQueue
 
 -- | creates a new tile
 hsNewTile ∷ Env → Double → Double → Double → Double → String → Lua.Lua ()
-hsNewTile env x y w h t = Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadTile tile
-  where tile = Tile (TilePos (x,y) (w,h)) (TileTex (tix,tiy) (tw,th) ti)
-        (tix,tiy,tw,th,ti) = (0,0,0,0,0) -- findTile t
+hsNewTile env x y w h t = Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadTile (TilePos (x,y) (w,h)) t
+
+-- | reloads the command buffers of the engine
+hsReload ∷ Env → Lua.Lua ()
+hsReload env = Lua.liftIO $ writeQueue'' env LoadQueue
+  $ QCLoadCmd $ LoadReload
