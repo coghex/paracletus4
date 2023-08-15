@@ -122,7 +122,7 @@ runVulk = do
       logDebug "loading system textures..."
       imgIndexPtr ← mallocRes
       let gqdata = GQData pdev dev commandPool (graphicsQueue queues)
-      texData ← loadVulkanTextures gqdata []
+      texData ← loadVulkanTextures gqdata ["dat/tex/grayscale.png", "dat/tex/texture.jpg"]
       -- child threads go here
       logDebug "forking lua interpreter..."
       env ← ask
@@ -147,7 +147,7 @@ runVulk = do
             RSRecreate → do
               -- load textures
               logDebug "recreating vulkan..."
-              newTexData ← loadVulkanTextures gqdata []
+              newTexData ← loadVulkanTextures gqdata ["dat/tex/grayscale.png"]
               modify $ \s → s { stReload = RSNULL
                               , stTick   = Just firstTick }
               let vulkLoopData' = VulkanLoopData {..}
@@ -351,13 +351,17 @@ genCommandBuffs dev pdev commandPool queues graphicsPipeline renderPass
         (w',h') ← case win of
           Just w0 → liftIO $ GLFW.getWindowSize w0
           Nothing → return (800,600)
-        logDebug "generating verticies"
-        let res   = calcVertices tiles
+        logDebug "generating verticies..."
+        let res   = calcVertices $ emptyTiles $ length tiles --tiles
             (w,h) = (fromIntegral w'/64.0,fromIntegral h'/64.0)
-            tiles = [Tile (TilePos (0,0) (w,h))
+            tiles = [Tile (TilePos (0,0) (1,1))
                           (TileTex (0,0) (1,1) 0)
-                    ,Tile (TilePos (0,0) (1,1))
-                          (TileTex (0,0) (1,1) 1)]
+                    ,Tile (TilePos (1,1) (1,1))
+                          (TileTex (0,0) (1,1) 1)
+                    ,Tile (TilePos (2,2) (1,1))
+                          (TileTex (0,0) (1,1) 2)
+                    ,Tile (TilePos (3,3) (1,1))
+                          (TileTex (0,0) (1,1) 3)]
             dyns  = generateDynData tiles
         writeTVar' env DynsTVar $ TVDyns dyns
         writeTVar' env VertsTVar $ TVVerts $ Verts res
@@ -372,3 +376,7 @@ genCommandBuffs dev pdev commandPool queues graphicsPipeline renderPass
     createCommandBuffers dev graphicsPipeline commandPool renderPass
       (pipelineLayout texData) swapInfo vertexBufferNew
       (dfLen inds0, indexBufferNew) framebuffers descriptorSets
+
+emptyTiles ∷ Int → [Tile]
+emptyTiles n = take n $ repeat $ Tile (TilePos (0,0) (1,1))
+                                      (TileTex (0,0) (1,1) 0)

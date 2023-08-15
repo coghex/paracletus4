@@ -10,6 +10,7 @@ import UPrelude
 import Control.Monad.State.Class (modify)
 import Prog ( MonadIO(liftIO), Prog, MonadReader(ask) )
 import Sign.Var ( atomically, modifyTVar' )
+import Prog.Util ( logDebug )
 import Vulk.Data ( TextureData(TextureData) )
 import Vulk.VulkData ( GQData(GQData) )
 import Vulk.Desc ( createDescriptorSetLayout )
@@ -40,13 +41,15 @@ loadVulkanTextures (GQData pdev dev cmdPool cmdQueue) fps = do
   (textureView0, mipLevels0)
     ← createTextureImageView pdev dev cmdPool cmdQueue tex0Path
   textureSampler0 ← createTextureSampler dev mipLevels0
-  -- tex one is the background
+  -- tex one is the vulkan tutorial image
   (textureView1, mipLevels1)
     ← createTextureImageView pdev dev cmdPool cmdQueue tex1Path
   textureSampler1 ← createTextureSampler dev mipLevels1
-  let defaultTexs = [textureView0, textureView1, textureView0, textureView1]
-      texViews = defaultTexs
-      texSamps = [textureSampler0, textureSampler1, textureSampler0, textureSampler1]
+  -- mod textures get added in by the lua files
+  modTexViews ← createTextureImageViews pdev dev cmdPool cmdQueue fps
+  texSamplersMod ← createTextureSamplers dev $ snd . unzip $ modTexViews
+  let texViews = [textureView0, textureView1] ⧺ fst (unzip modTexViews)
+      texSamps = [textureSampler0, textureSampler1] ⧺ texSamplersMod
   descriptorTextureInfo ← textureImageInfos texViews texSamps
   depthFormat ← findDepthFormat pdev
   let nimages = length texViews

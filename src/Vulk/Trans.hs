@@ -27,6 +27,7 @@ import Numeric.DataFrame
 import Load.Data ( DynData(..) )
 import Prog ( MonadIO(liftIO), Prog )
 import Prog.Foreign ( allocaPeek, poke )
+import Prog.Util ( logDebug )
 import Vulk.Foreign ( runVk )
 import Vulk.Buff ( createBuffer )
 import Vulk.Data ()
