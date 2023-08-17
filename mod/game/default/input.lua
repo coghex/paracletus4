@@ -7,7 +7,7 @@ function initInput ()
         -- if there are no input settings then we will
         -- need to create them
         game.logDebug("no settings on file, creating settings")
-        local defaulInputSettings = JSON:encode( { keySettings=keySetts } )
+        local defaulInputSettings = JSON:encode( { keySettings=keySetts }, { pretty = true } )
         outputf = io.open ("mod/game/default/input.json", "w+")
         io.output(outputf)
         io.write(defaulInputSettings)

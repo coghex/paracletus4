@@ -37,12 +37,14 @@ luauThread env = do
       log' env (LogDebug 1) modFiles
       let ls = envLuaSt env
       _ ← Lua.runWith ls $ do
-        Lua.registerHaskellFunction (fromString "rawExit")    (hsExit         env)
-        Lua.registerHaskellFunction (fromString "logDebug")   (hsLogDebug     env)
-        Lua.registerHaskellFunction (fromString "logInfo")    (hsLogInfo      env)
-        Lua.registerHaskellFunction (fromString "logError")   (hsLogError     env)
-        Lua.registerHaskellFunction (fromString "rawNewTile") (hsNewTile      env)
-        Lua.registerHaskellFunction (fromString "rawReload")  (hsReload       env)
+        Lua.registerHaskellFunction (fromString "rawExit")     (hsExit         env)
+        Lua.registerHaskellFunction (fromString "logDebug")    (hsLogDebug     env)
+        Lua.registerHaskellFunction (fromString "logInfo")     (hsLogInfo      env)
+        Lua.registerHaskellFunction (fromString "logError")    (hsLogError     env)
+        Lua.registerHaskellFunction (fromString "rawNewTile")  (hsNewTile      env)
+        Lua.registerHaskellFunction (fromString "rawNewAtlas") (hsNewAtlas     env)
+        Lua.registerHaskellFunction (fromString "rawReload")   (hsReload       env)
+        Lua.registerHaskellFunction (fromString "rawRecreate") (hsRecreate     env)
         Lua.registerHaskellFunction
           (fromString "rawRegisterInputKeys")          (hsRegisterInputKeys  env)
         Lua.registerHaskellFunction

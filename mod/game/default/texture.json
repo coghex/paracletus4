@@ -1,1 +1,1 @@
-{"textureData":[{"fp":"dat/tex/alpha.png","name":"alphaTile"},{"fp":"dat/tex/texture.jpg","name":"grecoTile"},{"fp":"dat/tex/grayscale.png","name":"grayscaleTile"}]}
+{"atlasData":[{"fp":"dat/tex/plains.png","h":4,"name":"plainsTile","w":3}],"textureData":[{"fp":"dat/tex/alpha.png","name":"alphaTile"},{"fp":"dat/tex/grayscale.png","name":"grayscaleTile"},{"fp":"dat/tex/texture.jpg","name":"grecoTile"}]}

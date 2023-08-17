@@ -37,8 +37,9 @@ data Event = EventError !GLFW.Error !String -- GLFW specific
            | EventSys !SysAction
            deriving (Show, Eq)
 
-data LoadCmd = LoadTile TilePos String | LoadState LoadStateChange
-             | LoadReload | LoadTest | LoadCmdNULL deriving (Show, Eq)
+data LoadCmd = LoadTile TilePos String | LoadAtlas TilePos String (Int,Int)
+             | LoadState LoadStateChange | LoadReload | LoadRecreate | LoadTest
+             | LoadCmdNULL deriving (Show, Eq)
 data InpCmd  = InpEvent InputEvent | InpState InputStateChange
              | InpCmdNULL  deriving (Show, Eq)
 

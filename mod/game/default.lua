@@ -11,7 +11,7 @@ function initMod ()
     initInput ()
     initTextures ()
     initMenu ()
-    game.reload()
+    game.recreate ()
 end
 function runMod ()
     game.logDebug("default mod: runMod()")

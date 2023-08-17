@@ -43,17 +43,16 @@ vertices ∷ [Tile] → DataFrame Vertex '[XN 0]
 vertices ts = fromList $ combineVertices (1∷Int) ts
   where combineVertices _    [] = []
         combineVertices nDyn
-          ((Tile (TilePos (x',y') (xscale',yscale'))
-          (TileTex (ax',ay') (sx,sy) t')):tts)
+          ((Tile _
+          (TileTex _ (sx,sy) _)):tts)
             = withColor (withMove (+ vec3 1 dyn moves')
-              (withTC (indexAtlas ax ay sx sy) (withTC (+ vec3 0 0 t)
+              (withTC (indexAtlas 0 0 sx sy) (withTC (+ vec3 0 0 t)
               (withPos (+ vec4 x0 y0 0 0)
               (withScale (* vec3 xscale yscale 1) vertsqs)))))
                 ⧺ combineVertices (nDyn + 1) tts where
-          (x0,y0) = (realToFrac(2*x'), realToFrac(2*y'))
-          ( ax,  ay) = (fromIntegral ax', fromIntegral ay')
-          (xscale, yscale)  = (realToFrac xscale', realToFrac yscale')
-          t = fromIntegral t'
+          (x0,y0) = (0,0)
+          (xscale, yscale)  = (1,1)
+          t = 0
           dyn = fromIntegral nDyn
           moves' = 1
           withPos f = map (\(S v) → S v { pos

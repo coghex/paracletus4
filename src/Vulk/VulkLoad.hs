@@ -48,8 +48,8 @@ loadVulkanTextures (GQData pdev dev cmdPool cmdQueue) fps = do
   -- mod textures get added in by the lua files
   modTexViews ← createTextureImageViews pdev dev cmdPool cmdQueue fps
   texSamplersMod ← createTextureSamplers dev $ snd . unzip $ modTexViews
-  let texViews = [textureView0, textureView1] ⧺ fst (unzip modTexViews)
-      texSamps = [textureSampler0, textureSampler1] ⧺ texSamplersMod
+  let texViews = fst (unzip modTexViews)
+      texSamps = texSamplersMod
   descriptorTextureInfo ← textureImageInfos texViews texSamps
   depthFormat ← findDepthFormat pdev
   let nimages = length texViews

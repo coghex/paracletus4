@@ -40,3 +40,6 @@ end
 function game.reload()
     rawReload()
 end
+function game.recreate()
+    rawRecreate()
+end

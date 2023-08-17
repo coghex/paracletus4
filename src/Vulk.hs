@@ -123,15 +123,17 @@ runVulk = do
       logDebug "loading system textures..."
       imgIndexPtr ← mallocRes
       let gqdata = GQData pdev dev commandPool (graphicsQueue queues)
-      texData ← loadVulkanTextures gqdata ["dat/tex/grayscale.png"]
+      texData ← loadVulkanTextures gqdata ["dat/tex/alpha.png"
+                                          ,"dat/tex/grayscale.png"
+                                          ,"dat/tex/texture.jpg"]
       -- child threads go here
       logDebug "forking lua interpreter..."
       env ← ask
+      writeChan' env InputChan TStart
+      writeChan' env LoadChan TStart
       _ ← liftIO $ forkIO $ luauThread env
       _ ← liftIO $ forkIO $ inputThread env window
-      writeChan' env InputChan TStart
       _ ← liftIO $ forkIO $ loadThread env
-      writeChan' env LoadChan TStart
       -- window size change handling
       let beforeSwapchainCreation ∷ Prog ε σ ()
           beforeSwapchainCreation =
@@ -148,8 +150,9 @@ runVulk = do
           case recr of
             RSRecreate → do
               -- load textures
-              logDebug "recreating vulkan..."
-              newTexData ← loadVulkanTextures gqdata texs
+              logDebug $ "recreating vulkan with textures: " ⧺ show texs
+              -- TODO: figure out why this needs to be backwards
+              newTexData ← loadVulkanTextures gqdata $ reverse texs
               modify $ \s → s { stReload = RSNULL
                               , stTick   = Just firstTick }
               let vulkLoopData' = VulkanLoopData {..}

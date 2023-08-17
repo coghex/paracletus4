@@ -77,12 +77,21 @@ processCommands ds = do
             return ds'
           -- sends the verts and dyns to the main thread
           DSSReload → do
-            log' (LogDebug 1) "regenerating verts and dyns"
-            let verts = Verts $ calcVertices $ emptyTiles $ length tiles
+            log' (LogDebug 1) "[Load] regenerating verts and dyns"
+            -- TODO: find why we need to reverse this
+            let verts = Verts $ calcVertices $ reverse tiles
                 tiles = dsTiles ds
                 dyns  = generateDynData tiles
             sendLoadEvent verts dyns
-            processCommands ds' { dsStatus = DSSNULL }
+            processCommands ds' { dsStatus = DSSNULL, dsDyns = dyns }
+          DSSRecreate → do
+            log' (LogDebug 1) "[Load] recreating swapchain"
+            let verts = Verts $ calcVertices $ reverse tiles
+                tiles = dsTiles ds
+                dyns  = generateDynData tiles
+            sendLoadEvent verts dyns
+            sendSys SysRecreate
+            processCommands ds' { dsStatus = DSSNULL, dsDyns = dyns }
           DSSNULL   → processCommands ds'
         LoadResultError str     → do
           log' LogError $ "load command error: " ⧺ str
@@ -98,12 +107,12 @@ processCommand ∷ (MonadLog μ,MonadFail μ)
   ⇒ DrawState → LoadCmd → LogT μ LoadResult
 processCommand ds cmd = case cmd of
   LoadState (LSCRegisterTextureMap fp) → do
-    log' (LogDebug 1) "registering texture map..."
+    log' (LogDebug 1) "[Load] registering texture map..."
     TextureMap tm ← readTextureMap fp
     sendTextures tm
     return $ LoadResultDrawState $ ds { dsTexMap = TextureMap tm }
   LoadTest → do
-    let tm = dsTexMap ds
+    let tm = dsDyns ds
     log' (LogDebug 1) $ "texMap: " ⧺ show tm
     return $ LoadResultSuccess
   LoadTile tilePos t → do
@@ -111,15 +120,28 @@ processCommand ds cmd = case cmd of
         tile          = Tile tilePos tt
         tt            = findTex t tm
     return $ LoadResultDrawState ds { dsTiles  = tile : (dsTiles ds) }
+  LoadAtlas tilePos t tind → do
+    let TextureMap tm = dsTexMap ds
+        tile          = Tile tilePos tt
+        tt            = findAtlas tind t tm
+    return $ LoadResultDrawState ds { dsTiles  = tile : (dsTiles ds) }
   LoadReload → do
     return $ LoadResultDrawState ds { dsStatus = DSSReload }
+  LoadRecreate → do
+    return $ LoadResultDrawState ds { dsStatus = DSSRecreate }
   _ → return LoadResultSuccess
 
 findTex ∷ String → [(String,Tex)] → TileTex
-findTex n [] = TileTex (0,0) (1,1) 0
-findTex n ((name,(Tex fp ind size)):texs)
-  | n ≡ name  = TileTex (0,0) size ind
+findTex _ [] = TileTex (0,0) (1,1) 0
+findTex n ((name,Tex _ ind siz):texs)
+  | n ≡ name  = TileTex (0,0) siz ind
   | otherwise = findTex n texs
+
+findAtlas ∷ (Int,Int) → String → [(String,Tex)] → TileTex
+findAtlas _    _ [] = TileTex (0,0) (1,1) 0
+findAtlas tind n ((name,Tex _ ind siz):texs)
+  | n ≡ name  = TileTex tind siz ind
+  | otherwise = findAtlas tind n texs
 
 -- | reads the texture data file
 readTextureMap ∷ (MonadLog μ, MonadFail μ)
@@ -129,9 +151,9 @@ readTextureMap path = do
   contents          ← liftIO $ hGetContents inputSettingsFile
   let textureMap = A.decode $ fromString contents
   case textureMap of
-    Just (InTexJson k0) → do
+    Just (InTexJson k0 k1) → do
       liftIO $ hClose inputSettingsFile
-      let texMap = createTextureMap 0 k0
+      let texMap = createTextureMap 0 k0 k1
       return $ TextureMap texMap
     Nothing → do
       log' LogError $ "[Input] error decoding " ⧺ path
@@ -139,11 +161,18 @@ readTextureMap path = do
       return $ TextureMap []
 
 -- | turns the list into a map
-createTextureMap ∷ Int → [TextureData] → [(String,Tex)]
-createTextureMap _ []       = []
-createTextureMap n ((TextureData name fp):tds)
-  = texdat : createTextureMap (n+1) tds
+createTextureMap ∷ Int → [TextureData] → [AtlasData] → [(String,Tex)]
+createTextureMap n []                          atl = createTextureAtlasMap n atl
+createTextureMap n ((TextureData name fp):tds) atl
+  = texdat : createTextureMap (n+1) tds atl
     where texdat = (name, Tex fp n (1,1))
+
+-- | turns the list into a map
+createTextureAtlasMap ∷ Int → [AtlasData] → [(String,Tex)]
+createTextureAtlasMap _ []       = []
+createTextureAtlasMap n ((AtlasData name fp w h):tds)
+  = texdat : createTextureAtlasMap (n+1) tds
+    where texdat = (name, Tex fp n (w,h))
 
 -- | initial draw state
 initDrawState ∷ DrawState

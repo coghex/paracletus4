@@ -43,6 +43,7 @@ data DrawState = DrawState
 --   pure functions
 data DSStatus = DSSExit
               | DSSReload
+              | DSSRecreate
               | DSSNULL deriving (Show, Eq)
 
 -- | mapping from image files to texture information
@@ -55,16 +56,33 @@ data Tex = Tex { tfp   ∷ String
 data TextureData = TextureData { name ∷ String
                                , fp   ∷ String } deriving (Generic, Show, Eq)
 
-data InTexJson   = InTexJson   { textureData ∷ [TextureData] } deriving (Generic, Show)
+data AtlasData = AtlasData { aname ∷ String
+                           , afp   ∷ String
+                           , w     ∷ Int
+                           , h     ∷ Int } deriving (Generic, Show, Eq)
+
+data InTexJson   = InTexJson   { textureData ∷ [TextureData], atlasData ∷ [AtlasData] } deriving (Generic, Show)
 instance FromJSON InTexJson where
   parseJSON = withObject "InTexJson" $ \v → InTexJson
         <$> v .: "textureData"
+        <*> v .: "atlasData"
 instance ToJSON   InTexJson where
-  toJSON (InTexJson textureData) =
-    object ["textureData" .= textureData]
-  toEncoding (InTexJson textureData) =
-    pairs ("textureData" .= textureData)
+  toJSON (InTexJson textureData atlasData) =
+    object ["textureData" .= textureData, "atlasData" .= atlasData]
+  toEncoding (InTexJson textureData atlasData) =
+    pairs ("textureData" .= textureData <> "atlasData" .= atlasData)
 
+instance FromJSON AtlasData where
+  parseJSON = withObject "atlasData" $ \v -> AtlasData
+        <$> v .: "name"
+        <*> v .: "fp"
+        <*> v .: "w"
+        <*> v .: "h"
+instance ToJSON   AtlasData where
+    toJSON (AtlasData name fp w h) =
+        object ["name" .= name, "fp" .= fp, "w" .= w, "h" .= h]
+    toEncoding (AtlasData name fp w h) =
+        pairs ("name" .= name <> "fp" .= fp <> "w" .= w <> "h" .= h)
 instance FromJSON TextureData where
   parseJSON = withObject "textureData" $ \v -> TextureData
         <$> v .: "name"

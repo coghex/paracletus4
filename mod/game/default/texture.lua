@@ -6,7 +6,7 @@ function initTextures ()
     if ftype == nil then
         -- create texture information
         game.logDebug("no texture data on file, creating texture data")
-        local defaulTextureMap = JSON:encode( { textureData = texm } )
+        local defaulTextureMap = JSON:encode( { textureData = texm, atlasData = atlasm } )
         outputf = io.open ("mod/game/default/texture.json", "w+")
         io.output(outputf)
         io.write(defaulTextureMap)
@@ -20,5 +20,8 @@ end
 
 texm = {}
 texm[1] = { name = "alphaTile",fp = "dat/tex/alpha.png" }
-texm[2] = { name = "grecoTile",fp = "dat/tex/texture.jpg" }
-texm[3] = { name = "grayscaleTile",fp = "dat/tex/grayscale.png" }
+texm[2] = { name = "grayscaleTile",fp = "dat/tex/grayscale.png" }
+texm[3] = { name = "grecoTile",fp = "dat/tex/texture.jpg" }
+
+atlasm = {}
+atlasm[1] = { name = "plainsTile",fp = "dat/tex/plains.png",w = 3, h = 4 }
