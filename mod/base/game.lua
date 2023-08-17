@@ -43,3 +43,6 @@ end
 function game.recreate()
     rawRecreate()
 end
+function game.selectWin(str)
+    rawSelectWin(str)
+end

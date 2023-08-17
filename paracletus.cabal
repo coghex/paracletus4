@@ -21,6 +21,7 @@ executable paracletus
                    Prog
                    Sign
                    Vulk
+                   Util
                    Load.Data
                    Load.Util
                    Luau.Command
@@ -81,6 +82,8 @@ executable paracletus
                  , hslua
                  , stm
                  , mtl
+                 , cryptohash-md5
+                 , base64
                  , random
                  , process
                  , vector

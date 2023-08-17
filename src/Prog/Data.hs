@@ -11,7 +11,7 @@ import Sign.Data ( TState, Event(..), LoadCmd(..), InpCmd(..) )
 import Sign.Except ( ProgExcept )
 import Sign.Queue ( Queue, TChan )
 import Sign.Var ( TVar )
-import Data ( FPS )
+import Data ( FPS, ID )
 import Data.Time.Clock.System ( SystemTime )
 import Data.Map (Map)
 import Vulk.Data ( Verts )
@@ -30,6 +30,7 @@ data ReloadState = RSReload | RSRecreate | RSNULL deriving (Show, Eq)
 -- | transactional memory and inter thread communication
 data Env = Env { envQueues ∷ Queues
                , envChans  ∷ Chans
+               , envIDChan ∷ TChan ID
                , envTVars  ∷ TVars
                , envLuaSt  ∷ Lua.State }
 
@@ -42,7 +43,7 @@ data QueueName = EventQueue | LoadQueue
                | InputQueue | CustomQueue Int deriving (Show, Eq, Ord)
 -- | dynamic collection of chans
 data Chans     = Chans { cm ∷ Map ChanName (TChan TState) }
-data ChanName  = LuaChan | InputChan | LoadChan
+data ChanName  = LuaChan | InputChan | LoadChan | IDChan
                | CustomChan Int deriving (Show, Eq, Ord)
 -- | dynamic collection of tvars
 data TVars     = TVars { tm ∷ Map TVarName (TVar (Maybe TVarValue)) }

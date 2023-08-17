@@ -12,7 +12,7 @@ import Vulk.Trans ( texDynDataFrame, dynDataFrame )
 
 generateDynData ∷ [Tile] → [DynData]
 generateDynData [] = []
-generateDynData ((Tile (TilePos (x,y) (w,h)) (TileTex texi texs tex)):ts)
+generateDynData ((Tile id (TilePos (x,y) (w,h)) (TileTex texi texs tex)):ts)
   = DynData dataF texDF : generateDynData ts
       where dataF = dynDataFrame pos scale
             texDF = texDynDataFrame (Color 255 255 255 255) texi tex

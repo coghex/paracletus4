@@ -30,13 +30,13 @@ instance ToJSON   KeySettings where
     toEncoding (KeySettings keyEscape keyTest) =
         pairs ("keyEscape" .= keyEscape <> "keyTest" .= keyTest)
 
--- | abstract window
-data Window = Window { winTitle  ∷ String
-                     , winSize   ∷ (Int,Int)
-                     , winPages  ∷ [Page]
-                     } deriving (Show, Eq)
-
--- | each window contains pages, each page contains winElems
-data Page = Page { pageTitle  ∷ String
-                 } deriving (Show, Eq)
-
+---- | abstract window
+--data Window = Window { winTitle  ∷ String
+--                     , winSize   ∷ (Int,Int)
+--                     , winPages  ∷ [Page]
+--                     } deriving (Show, Eq)
+--
+---- | each window contains pages, each page contains winElems
+--data Page = Page { pageTitle  ∷ String
+--                 } deriving (Show, Eq)
+--

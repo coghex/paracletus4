@@ -9,7 +9,7 @@ module Load where
 -- a thread to help recreate the swapchain
 import Prelude ()
 import UPrelude
-import Data ( PrintArg(PrintNULL), Color(..) )
+import Data ( PrintArg(PrintNULL), Color(..), ID(..) )
 import Data.Aeson as A
 import Data.Maybe ( fromMaybe )
 import Data.List.Split ( splitOn )
@@ -17,13 +17,13 @@ import Data.Map as Map
 import Data.String ( fromString )
 import Load.Data
 import Load.Util ( emptyTiles )
-import Luau.Data ( Window(..), Page(..) )
 import Prog.Data
 import Prog.Buff ( generateDynData )
 import Sign.Data
 import Sign.Log
 import Vulk.Calc ( calcVertices )
 import Vulk.Data ( Verts(Verts) )
+import Util ( newID )
 import Control.Concurrent (threadDelay)
 import Control.Monad.IO.Class ( liftIO, MonadIO(..) )
 import Data.Time.Clock (diffUTCTime, getCurrentTime)
@@ -111,32 +111,72 @@ processCommand ds cmd = case cmd of
     TextureMap tm ← readTextureMap fp
     sendTextures tm
     return $ LoadResultDrawState $ ds { dsTexMap = TextureMap tm }
+  LoadState (LSCSelectWin name) → do
+    log' (LogDebug 1) $ "[Load] selecting win: " ⧺ name
+    -- test to make sure window exists and not already selected
+    let wins = dsWins ds
+        curr = dsCurr ds
+    case Map.lookup name wins of
+      Just w0 → if (curr ≡ name) then do
+          log' LogInfo $ "[Load] window " ⧺ name ⧺ " already selected"
+          return LoadResultSuccess
+        else
+          return $ LoadResultDrawState $ ds { dsCurr = name
+                                            , dsStatus = DSSReload }
+      Nothing → do
+        log' LogWarn $ "[Load] window " ⧺ name ⧺ " doesnt exist"
+        return LoadResultSuccess
   LoadTest → do
     let tm = dsDyns ds
-    log' (LogDebug 1) $ "texMap: " ⧺ show tm
-    return $ LoadResultSuccess
-  LoadTile tilePos t → do
-    let TextureMap tm = dsTexMap ds
-        tile          = Tile tilePos tt
-        tt            = findTex t tm
-    return $ LoadResultDrawState ds { dsTiles  = tile : (dsTiles ds) }
-  LoadAtlas tilePos t tind → do
-    let TextureMap tm = dsTexMap ds
-        tile          = Tile tilePos tt
-        tt            = findAtlas tind t tm
-    return $ LoadResultDrawState ds { dsTiles  = tile : (dsTiles ds) }
+    log' (LogDebug 1) $ "[***Test***] texMap: " ⧺ show tm
+    return LoadResultSuccess
+  LoadNew lc → newChunk ds lc
   LoadReload → do
     return $ LoadResultDrawState ds { dsStatus = DSSReload }
   LoadRecreate → do
     return $ LoadResultDrawState ds { dsStatus = DSSRecreate }
   _ → return LoadResultSuccess
 
+-- | adds a chunk of data to the drawstate
+newChunk ∷ (MonadLog μ,MonadFail μ) ⇒ DrawState → LoadChunk → LogT μ LoadResult
+newChunk ds (LCWindow name)            = do
+  ID id ← liftIO newID
+  writeIDChan $ ID id
+  return $ LoadResultDrawState $ ds { dsWins = Map.insert id (Window id []) (dsWins ds) }
+newChunk ds (LCTile  win pos tex)      = do
+  id ← liftIO newID
+  let TextureMap tm = dsTexMap ds
+      tile          = Tile id pos tt
+      tt            = findTex tex tm
+  writeIDChan id
+  return $ LoadResultDrawState $ newTile ds win tile
+newChunk ds (LCAtlas win pos tex tind) = do
+  id ← liftIO newID
+  let TextureMap tm = dsTexMap ds
+      tile          = Tile id pos tt
+      tt            = findAtlas tind tex tm
+  writeIDChan id
+  return $ LoadResultDrawState $ newTile ds win tile
+newChunk _  LCNULL                     = return LoadResultSuccess
+newChunk _  lc                         = do
+  log' LogWarn $ "[Load] unknown load chunk command"
+  return LoadResultSuccess
+
+-- | adds a new tile to a window
+newTile ∷ DrawState → String → Tile → DrawState
+newTile ds win tile = ds { dsTiles = tile : (dsTiles ds) }
+-- { dsWins = addTileToWin (dsWins ds) win tile }
+addTileToWin ∷ Map.Map String Window → String → Tile → Map.Map String Window
+addTileToWin wins win tile = case Map.lookup win wins of
+  Nothing → wins
+  Just w0 → Map.insert win win' wins where win' = w0
+
+-- | converts tex to tiletex at input tex n
 findTex ∷ String → [(String,Tex)] → TileTex
 findTex _ [] = TileTex (0,0) (1,1) 0
 findTex n ((name,Tex _ ind siz):texs)
   | n ≡ name  = TileTex (0,0) siz ind
   | otherwise = findTex n texs
-
 findAtlas ∷ (Int,Int) → String → [(String,Tex)] → TileTex
 findAtlas _    _ [] = TileTex (0,0) (1,1) 0
 findAtlas tind n ((name,Tex _ ind siz):texs)
@@ -176,5 +216,5 @@ createTextureAtlasMap n ((AtlasData name fp w h):tds)
 
 -- | initial draw state
 initDrawState ∷ DrawState
-initDrawState = DrawState DSSNULL (TextureMap []) [] []
+initDrawState = DrawState DSSNULL (TextureMap []) [] [] Map.empty []
 

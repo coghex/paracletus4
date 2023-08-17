@@ -6,6 +6,7 @@ module Load.Data where
 -- data for the loading thread is found
 import Prelude()
 import UPrelude
+import Data ( ID )
 import Data.Aeson
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -17,7 +18,8 @@ data DynData = DynData { ddDataF ∷ Mat44f
                        , ddTexDF ∷ Mat44f
                        } deriving (Show, Eq)
 -- | a tile in abstract form
-data Tile = Tile { tilePos ∷ TilePos
+data Tile = Tile { tileID  ∷ ID
+                 , tilePos ∷ TilePos
                  , tileTex ∷ TileTex } deriving (Show, Eq)
 data TilePos = TilePos { tPos   ∷ (Double,Double)
                        , tScale ∷ (Double,Double) } deriving (Show, Eq)
@@ -35,7 +37,20 @@ data DrawState = DrawState
   -- | abstract tiles contain 
   , dsTiles     ∷ [Tile]
   -- | list of dyns in same order as tiles
-  , dsDyns      ∷ [DynData] } deriving (Show, Eq)
+  , dsDyns      ∷ [DynData]
+  -- | list of window objects
+  , dsWins      ∷ Map.Map String Window
+  -- | current window
+  , dsCurr      ∷ String
+  } deriving (Show, Eq)
+
+-- | windows contain elements that get converted to tiles and dyns
+data Window = Window { winTitle ∷ String
+                     , winElems ∷ [WinElem]
+                     } deriving (Show, Eq)
+-- | window elements define various things that can be interacted with
+data WinElem = WinElemTile (Double,Double) (Double,Double)
+             | WinElemNULL deriving (Show, Eq)
 
 
 -- | status of the loading thread, allowing

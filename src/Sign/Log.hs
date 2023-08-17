@@ -10,12 +10,13 @@ import Control.Monad.IO.Class
 import Control.Monad.Morph
 import Control.Monad.Reader
 import System.Log.FastLogger
+import Data ( ID )
 import Load.Data ( DynData(..), TextureMap(..), Tex(..) )
 import Prog.Data ( Env(..), ChanName(..), QueueName(..), QueueCmd(..) )
 import Sign.Data ( LogLevel(..), Event(..), TState(..), LoadCmd(..)
                  , SysAction(..), LoadData(..), SettingsChange(..) )
 import Sign.Var ( atomically, readTVar )
-import Sign.Queue ( writeQueue, readChan, tryReadChan )
+import Sign.Queue ( writeQueue, readChan, tryReadChan, writeChan )
 import Sign.Util ( readChan', writeQueue'', tryReadQueue'' )
 import Vulk.Font (TTFData(..))
 import Vulk.Data (Verts(..))
@@ -115,6 +116,12 @@ readCommand = do
     Just badloadcmd      → do
       log' LogError $ "bad load command " ⧺ show badloadcmd
       return Nothing
+
+-- | writes to the ID chan
+writeIDChan ∷ (MonadLog μ, MonadFail μ) ⇒ ID → μ ()
+writeIDChan id = do
+  (Log _   env _   _   _) ← askLog
+  liftIO $ atomically $ writeChan (envIDChan env) id
 
 -- | sends a syscommand over the event queue
 sendSys ∷ (MonadLog μ, MonadFail μ) ⇒ SysAction → μ ()

@@ -24,6 +24,9 @@ cradle:
     - path: "src/Vulk.hs"
       component: "paracletus:exe:paracletus"
 
+    - path: "src/Util.hs"
+      component: "paracletus:exe:paracletus"
+
     - path: "src/Load/Data.hs"
       component: "paracletus:exe:paracletus"
 

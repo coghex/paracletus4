@@ -37,14 +37,21 @@ data Event = EventError !GLFW.Error !String -- GLFW specific
            | EventSys !SysAction
            deriving (Show, Eq)
 
-data LoadCmd = LoadTile TilePos String | LoadAtlas TilePos String (Int,Int)
+-- | possible commands load thread can handle
+data LoadCmd = LoadNew LoadChunk
              | LoadState LoadStateChange | LoadReload | LoadRecreate | LoadTest
              | LoadCmdNULL deriving (Show, Eq)
+data LoadChunk = LCWindow String
+               | LCTile String TilePos String
+               | LCAtlas String TilePos String (Int,Int)
+               | LCNULL deriving (Show, Eq)
+-- | possible events the input thread can handle
 data InpCmd  = InpEvent InputEvent | InpState InputStateChange
              | InpCmdNULL  deriving (Show, Eq)
 
 -- | possible changes to the load state
 data LoadStateChange = LSCRegisterTileMap String | LSCRegisterTextureMap String
+                     | LSCSelectWin String
                      | LSCNULL deriving (Show, Eq)
 
 -- | log levels are for monadic logger, but stdio

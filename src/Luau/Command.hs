@@ -7,16 +7,16 @@ import qualified HsLua as Lua
 import Data.List.Split (splitOn)
 import Data.Maybe ( fromMaybe )
 import Numeric ( readHex )
+import Data (ID(..))
 import Text.Read ( readMaybe )
 import Prog.Data ( Env(..), QueueName(..), QueueCmd(..) )
 import Sign.Data
-    ( Event(EventSys, EventLog), LogLevel(..), InputStateChange(..), LoadCmd(..)
+    ( Event(EventSys, EventLog), LogLevel(..), InputStateChange(..), LoadCmd(..), LoadChunk(..)
     , SysAction(SysReload, SysExit, SysRecreate), InpCmd(..), LoadStateChange(..) )
-import Sign.Queue ( writeQueue )
+import Sign.Queue ( writeQueue, readChan )
 import Sign.Var ( atomically, readTVar )
 import Sign.Util ( writeQueue'' )
 import Load.Data ( Tile(..), TilePos(..), TileTex(..) )
-import Luau.Data ( Window(..), Page(..) )
 import Luau.Util ( vtail, vhead, luaEvent )
 
 -- | quits everything using glfw
@@ -49,13 +49,30 @@ hsRegisterTextureMap ∷ Env → String → Lua.Lua ()
 hsRegisterTextureMap env str = Lua.liftIO $ writeQueue'' env LoadQueue
   $ QCLoadCmd $ LoadState (LSCRegisterTextureMap str)
 
--- | creates a new tile
-hsNewTile ∷ Env → Double → Double → Double → Double → String → Lua.Lua ()
-hsNewTile env x y w h t = Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadTile (TilePos (x,y) (w,h)) t
+-- | creates a new window
+hsNewWindow ∷ Env → String → Lua.Lua String
+hsNewWindow env name = do
+  Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew $ LCWindow name
+  ID id0 ← Lua.liftIO $ atomically $ readChan (envIDChan env)
+  return id0
+-- | selects a new window
+hsSelectWin ∷ Env → String → Lua.Lua ()
+hsSelectWin env name = Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadState $ LSCSelectWin name
 
 -- | creates a new tile
-hsNewAtlas ∷ Env → Double → Double → Double → Double → String → Int → Int → Lua.Lua ()
-hsNewAtlas env x y w h t tx ty = Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadAtlas (TilePos (x,y) (w,h)) t (tx,ty)
+hsNewTile ∷ Env → Double → Double → Double → Double → String → String → Lua.Lua String
+hsNewTile env x y w h win t = do
+  Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew $ LCTile win (TilePos (x,y) (w,h)) t
+  ID id0 ← Lua.liftIO $ atomically $ readChan (envIDChan env)
+  return id0
+
+-- | creates a new tile
+hsNewAtlas ∷ Env → Double → Double → Double → Double → String
+           → String → Int → Int → Lua.Lua String
+hsNewAtlas env x y w h win t tx ty = do
+  Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew $ LCAtlas win (TilePos (x,y) (w,h)) t (tx,ty)
+  ID id0 ← Lua.liftIO $ atomically $ readChan (envIDChan env)
+  return id0
 
 -- | reloads the command buffers of the engine
 hsReload ∷ Env → Lua.Lua ()

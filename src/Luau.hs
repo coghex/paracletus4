@@ -11,6 +11,7 @@ import Data.Maybe ( fromMaybe )
 import Data.String ( fromString )
 import Data.Time.Clock (diffUTCTime, getCurrentTime)
 import qualified HsLua as Lua
+import Control.Monad.Catch ( catch )
 import System.Directory (getDirectoryContents)
 import System.FilePath (combine)
 import Luau.Command
@@ -37,14 +38,16 @@ luauThread env = do
       log' env (LogDebug 1) modFiles
       let ls = envLuaSt env
       _ ← Lua.runWith ls $ do
-        Lua.registerHaskellFunction (fromString "rawExit")     (hsExit         env)
-        Lua.registerHaskellFunction (fromString "logDebug")    (hsLogDebug     env)
-        Lua.registerHaskellFunction (fromString "logInfo")     (hsLogInfo      env)
-        Lua.registerHaskellFunction (fromString "logError")    (hsLogError     env)
-        Lua.registerHaskellFunction (fromString "rawNewTile")  (hsNewTile      env)
-        Lua.registerHaskellFunction (fromString "rawNewAtlas") (hsNewAtlas     env)
-        Lua.registerHaskellFunction (fromString "rawReload")   (hsReload       env)
-        Lua.registerHaskellFunction (fromString "rawRecreate") (hsRecreate     env)
+        Lua.registerHaskellFunction (fromString "rawExit")      (hsExit         env)
+        Lua.registerHaskellFunction (fromString "logDebug")     (hsLogDebug     env)
+        Lua.registerHaskellFunction (fromString "logInfo")      (hsLogInfo      env)
+        Lua.registerHaskellFunction (fromString "logError")     (hsLogError     env)
+        Lua.registerHaskellFunction (fromString "rawNewTile")   (hsNewTile      env)
+        Lua.registerHaskellFunction (fromString "rawNewAtlas")  (hsNewAtlas     env)
+        Lua.registerHaskellFunction (fromString "rawReload")    (hsReload       env)
+        Lua.registerHaskellFunction (fromString "rawRecreate")  (hsRecreate     env)
+        Lua.registerHaskellFunction (fromString "rawNewWindow") (hsNewWindow    env)
+        Lua.registerHaskellFunction (fromString "rawSelectWin") (hsSelectWin    env)
         Lua.registerHaskellFunction
           (fromString "rawRegisterInputKeys")          (hsRegisterInputKeys  env)
         Lua.registerHaskellFunction

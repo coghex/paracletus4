@@ -43,7 +43,7 @@ vertices ∷ [Tile] → DataFrame Vertex '[XN 0]
 vertices ts = fromList $ combineVertices (1∷Int) ts
   where combineVertices _    [] = []
         combineVertices nDyn
-          ((Tile _
+          ((Tile _ _
           (TileTex _ (sx,sy) _)):tts)
             = withColor (withMove (+ vec3 1 dyn moves')
               (withTC (indexAtlas 0 0 sx sy) (withTC (+ vec3 0 0 t)

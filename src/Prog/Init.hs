@@ -46,6 +46,8 @@ initEnv = do
   luaCh    ← newTChan
   loadCh   ← newTChan
   inpCh    ← newTChan
+  -- channel specifically for returning object IDs to lua
+  idCh     ← newTChan
   -- vert TVar keeps verticies in a cache so when we only
   -- recalculate if we explicitly ask for it
   vertsTV  ← atomically $ newTVar Nothing
@@ -53,6 +55,7 @@ initEnv = do
   dynsTV   ← atomically $ newTVar Nothing
   let env = Env { envQueues = Queues queues3
                 , envChans  = Chans chans3
+                , envIDChan = idCh
                 , envTVars  = TVars tvars2
                 , envLuaSt  = luaSt }
       queues0 = Map.empty

@@ -15,7 +15,7 @@ import Data.List ( zip4 )
 import GHC.Stack ( HasCallStack )
 import Graphics.Vulkan.Core_1_0
 import Graphics.Vulkan.Ext.VK_KHR_swapchain
-import Data ( Color(Color), FPS(..) )
+import Data ( Color(Color), FPS(..), ID(..) )
 import Luau ( luauThread )
 import Load ( loadThread )
 import Load.Data ( DynData(..), Tile(..), TilePos(..), TileTex(..) )
@@ -85,10 +85,15 @@ import Vulk.VulkLoad ( loadVulkanTextures )
 import Vulk.VulkGLFW ( glfwWaitEventsMeanwhile, getCurTick, loadLoop
                      , initGLFWWindow, glfwMainLoop )
 import qualified Vulk.GLFW as GLFW
+import Util ( newID )
 
 runVulk ∷ HasCallStack ⇒ Prog ε σ ()
 runVulk = do
     logDebug "beginning paracletus..."
+    id1 ← liftIO newID
+    logDebug $ show id1
+    id2 ← liftIO newID
+    logDebug $ show id2
     -- windowsizechanged is completely seperate from all other data
     windowSizeChanged ← liftIO $ atomically $ newTVar True
     -- window loads in at 800 600 by default
@@ -114,13 +119,13 @@ runVulk = do
       logDebug "compiling shaders..."
       (shaderVert,shaderFrag) ← makeShader dev
       -- more vulkan specifics
-      logDebug "creating semaphores and fences..."
+      --logDebug "creating semaphores and fences..."
       frameIndexRef ← liftIO $ atomically $ newTVar 0
       renderFinishedSems ← createFrameSemaphores dev
       imageAvailableSems ← createFrameSemaphores dev
       inFlightFences     ← createFrameFences     dev
       commandPool        ← createCommandPool     dev queues
-      logDebug "loading system textures..."
+      --logDebug "loading system textures..."
       imgIndexPtr ← mallocRes
       let gqdata = GQData pdev dev commandPool (graphicsQueue queues)
       texData ← loadVulkanTextures gqdata ["dat/tex/alpha.png"
@@ -190,7 +195,7 @@ vulkLoop (VulkanLoopData (GQData pdev dev commandPool _) queues scsd0
                return (scsd0,windowSize)
     swapInfo ← createSwapchain dev scsd queues vulkanSurface
     let swapchainLen = length (swapImgs swapInfo)
-    logDebug "creating object buffers..."
+    --logDebug "creating object buffers..."
     (transObjMems, transObjBufs)
       ← unzip ⊚ createTransObjBuffers pdev dev swapchainLen
     transObjMemories ← newArrayRes transObjMems
@@ -208,7 +213,7 @@ vulkLoop (VulkanLoopData (GQData pdev dev commandPool _) queues scsd0
     dynTexDescBufInfos ← mapM (transTexBufferInfo nDynObjs) transTexBufs
     transTexMemories ← newArrayRes transTexMems
     -- DESCRIPTOR POOL
-    logDebug "creating descriptor pool..."
+    --logDebug "creating descriptor pool..."
     descriptorPool ← createDescriptorPool dev swapchainLen (nimages texData)
     descriptorSetLayouts
       ← newArrayRes $ replicate swapchainLen $ descSetLayout texData
@@ -222,7 +227,7 @@ vulkLoop (VulkanLoopData (GQData pdev dev commandPool _) queues scsd0
           → prepareDescriptorSet dev bufInfo dynBufInfo
               dynTexBufInfo (descTexInfo texData) dSet (nimages texData)
     -- PIPELINE
-    logDebug "creating img views..."
+    --logDebug "creating img views..."
     imgViews ← mapM
       (\image → createImageView dev image (swapImgFormat swapInfo)
                  VK_IMAGE_ASPECT_COLOR_BIT 1) (swapImgs swapInfo)
@@ -234,11 +239,11 @@ vulkLoop (VulkanLoopData (GQData pdev dev commandPool _) queues scsd0
     depthAttImgView ← createDepthAttImgView pdev dev commandPool
                         (graphicsQueue queues) (swapExtent swapInfo)
                         msaaSamples
-    logDebug "creating pipeline..."
+    --logDebug "creating pipeline..."
     graphicsPipeline ← createGraphicsPipeline dev swapInfo vertIBD
                          vertIADs [shaderVert, shaderFrag] renderPass
                          (pipelineLayout texData) msaaSamples
-    logDebug "creating framebuffers..."
+    --logDebug "creating framebuffers..."
     framebuffers ← createFramebuffers dev renderPass swapInfo imgViews
                      depthAttImgView colorAttImgView
     -- fps counter
@@ -360,13 +365,13 @@ genCommandBuffs dev pdev commandPool queues graphicsPipeline renderPass
         logDebug "generating verticies..."
         let res   = calcVertices $ emptyTiles $ length tiles --tiles
             (w,h) = (fromIntegral w'/64.0,fromIntegral h'/64.0)
-            tiles = [Tile (TilePos (0,0) (1,1))
+            tiles = [Tile IDNULL (TilePos (0,0) (1,1))
                           (TileTex (0,0) (1,1) 0)
-                    ,Tile (TilePos (1,1) (1,1))
+                    ,Tile IDNULL (TilePos (1,1) (1,1))
                           (TileTex (0,0) (1,1) 1)
-                    ,Tile (TilePos (2,2) (1,1))
+                    ,Tile IDNULL (TilePos (2,2) (1,1))
                           (TileTex (0,0) (1,1) 2)
-                    ,Tile (TilePos (3,3) (1,1))
+                    ,Tile IDNULL (TilePos (3,3) (1,1))
                           (TileTex (0,0) (1,1) 3)]
             dyns  = generateDynData tiles
         writeTVar' env DynsTVar $ TVDyns dyns
