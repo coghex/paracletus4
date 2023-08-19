@@ -48,7 +48,7 @@ data ChanName  = LuaChan | InputChan | LoadChan | IDChan
 -- | dynamic collection of tvars
 data TVars     = TVars { tm ∷ Map TVarName (TVar (Maybe TVarValue)) }
 data TVarValue = TVInt Int | TVString String | TVVerts Verts | TVDyns [DynData]
-data TVarName  = WindowTVar | VertsTVar | DynsTVar
+data TVarName  = WindowTVar | VertsTVar | DynsTVar | FontSizeTVar
                | CustomTVar Int deriving (Show, Eq, Ord)
 
 -- | state holds mutable data, and the
@@ -68,6 +68,8 @@ data State = State { stStatus   ∷ ProgExcept
                    , stSettings ∷ !Settings
                    -- | the list of textures by fp loaded from outside
                    , stTextures ∷ ![String]
+                   -- | the optional font must be loaded seperately
+                   , stFont     ∷ !(Maybe String)
                    -- | variables for FPS calculation
                    , stStartT   ∷ !SystemTime
                    , stFPS      ∷ !FPS

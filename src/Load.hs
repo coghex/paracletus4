@@ -77,18 +77,20 @@ processCommands ds = do
             return ds'
           -- sends the verts and dyns to the main thread
           DSSReload → do
-            log' (LogDebug 1) "[Load] regenerating verts and dyns"
+            fontsize ← readFontSize
+            log' (LogDebug 1) $ "[Load] regenerating verts and dyns"
             -- TODO: find why we need to reverse this
             let verts = Verts $ calcVertices $ reverse tiles
                 tiles = dsTiles ds
-                dyns  = generateDynData tiles
+                dyns  = generateDynData fontsize tiles
             sendLoadEvent verts dyns
             processCommands ds' { dsStatus = DSSNULL, dsDyns = dyns }
           DSSRecreate → do
-            log' (LogDebug 1) "[Load] recreating swapchain"
+            fontsize ← readFontSize
+            log' (LogDebug 1) $ "[Load] recreating swapchain"
             let verts = Verts $ calcVertices $ reverse tiles
                 tiles = dsTiles ds
-                dyns  = generateDynData tiles
+                dyns  = generateDynData fontsize tiles
             sendLoadEvent verts dyns
             sendSys SysRecreate
             processCommands ds' { dsStatus = DSSNULL, dsDyns = dyns }
@@ -127,9 +129,9 @@ processCommand ds cmd = case cmd of
         log' LogWarn $ "[Load] window " ⧺ name ⧺ " doesnt exist"
         return LoadResultSuccess
   LoadTest → do
-    let tm = dsDyns ds
-    log' (LogDebug 1) $ "[***Test***] texMap: " ⧺ show tm
-    return LoadResultSuccess
+    fontsize ← readFontSize
+    log' (LogDebug 1) $ "[***Test***] fontsize: " ⧺ show fontsize
+    return $ LoadResultDrawState $ ds { dsStatus = DSSRecreate }
   LoadNew lc → newChunk ds lc
   LoadReload → do
     return $ LoadResultDrawState ds { dsStatus = DSSReload }
@@ -140,26 +142,31 @@ processCommand ds cmd = case cmd of
 -- | adds a chunk of data to the drawstate
 newChunk ∷ (MonadLog μ,MonadFail μ) ⇒ DrawState → LoadChunk → LogT μ LoadResult
 newChunk ds (LCWindow name)            = do
-  ID id ← liftIO newID
-  writeIDChan $ ID id
-  return $ LoadResultDrawState $ ds { dsWins = Map.insert id (Window id []) (dsWins ds) }
+  ID id0 ← liftIO newID
+  writeIDChan $ ID id0
+  return $ LoadResultDrawState $ ds { dsWins = Map.insert id0 (Window name []) (dsWins ds) }
 newChunk ds (LCTile  win pos tex)      = do
-  id ← liftIO newID
+  id0 ← liftIO newID
   let TextureMap tm = dsTexMap ds
-      tile          = Tile id pos tt
+      tile          = Tile id0 pos tt
       tt            = findTex tex tm
-  writeIDChan id
+  writeIDChan id0
   return $ LoadResultDrawState $ newTile ds win tile
 newChunk ds (LCAtlas win pos tex tind) = do
-  id ← liftIO newID
+  id0 ← liftIO newID
   let TextureMap tm = dsTexMap ds
-      tile          = Tile id pos tt
+      tile          = Tile id0 pos tt
       tt            = findAtlas tind tex tm
-  writeIDChan id
+  writeIDChan id0
+  return $ LoadResultDrawState $ newTile ds win tile
+newChunk ds (LCText win (Text pos size text)) = do
+  id0 ← liftIO newID
+  let tile = Tile id0 (TilePos pos size) $ TileTex (0,0) (1,1) (-10)
+  writeIDChan id0
   return $ LoadResultDrawState $ newTile ds win tile
 newChunk _  LCNULL                     = return LoadResultSuccess
 newChunk _  lc                         = do
-  log' LogWarn $ "[Load] unknown load chunk command"
+  log' LogWarn $ "[Load] unknown load chunk command " ⧺ show lc
   return LoadResultSuccess
 
 -- | adds a new tile to a window

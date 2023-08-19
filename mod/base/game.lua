@@ -46,3 +46,6 @@ end
 function game.selectWin(str)
     rawSelectWin(str)
 end
+function game.loadFont(str)
+    rawLoadFont(str)
+end

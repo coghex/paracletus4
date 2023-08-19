@@ -12,3 +12,8 @@ function newWindow(str)
     id = rawNewWindow(str)
     return id
 end
+
+function newText (x,y,w,h,win,text)
+    id = rawNewText (x,y,w,h,win,text)
+    return id
+end

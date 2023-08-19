@@ -53,10 +53,14 @@ initEnv = do
   vertsTV  ← atomically $ newTVar Nothing
   -- same for dynamic data, there will be lots of it
   dynsTV   ← atomically $ newTVar Nothing
+  -- we need to keep track of how large the font is since we are
+  -- putting it first in the list of textures and different fonts
+  -- with different sizes can be loaded
+  fsTV     ← atomically $ newTVar Nothing
   let env = Env { envQueues = Queues queues3
                 , envChans  = Chans chans3
                 , envIDChan = idCh
-                , envTVars  = TVars tvars2
+                , envTVars  = TVars tvars3
                 , envLuaSt  = luaSt }
       queues0 = Map.empty
       queues1 = Map.insert EventQueue eventQ  queues0
@@ -67,8 +71,9 @@ initEnv = do
       chans2  = Map.insert LoadChan   loadCh  chans1
       chans3  = Map.insert InputChan  inpCh   chans2
       tvars0  = Map.empty
-      tvars1  = Map.insert VertsTVar  vertsTV tvars0
-      tvars2  = Map.insert DynsTVar   dynsTV  tvars1
+      tvars1  = Map.insert VertsTVar    vertsTV tvars0
+      tvars2  = Map.insert DynsTVar     dynsTV  tvars1
+      tvars3  = Map.insert FontSizeTVar fsTV    tvars2
   -- and env that can be accessed transactionally
   envChan ← atomically $ newTVar env
   -- we return both so that initState doesnt need to load the TVar
@@ -94,6 +99,7 @@ initState _   = do
                              , stReload    = RSNULL
                              , stSettings  = settings
                              , stTextures  = []
+                             , stFont      = Nothing
                              , stStartT    = st
                              , stFPS       = FPS 60.0 60 True
                              , stTick      = Nothing }

@@ -14,7 +14,7 @@ import Prog.Data (Env(..), State(..), ReloadState(..), QueueCmd(..), QueueName(.
                   TVarName(..), TVarValue(..))
 import Prog.Util ( logCommand )
 import Sign.Data
-    ( Event(..), LogLevel(..), SysAction(..), InpCmd(..), LoadData(..) )
+    ( Event(..), LogLevel(..), SysAction(..), InpCmd(..), LoadData(..), LoadCmd(..) )
 import Sign.Except ( ExType(ExVulk) )
 import Sign.Var ( atomically, modifyTVar' )
 import Sign.Util ( tryReadQueue', writeQueue', log'', writeTVar')
@@ -49,6 +49,8 @@ processEvent (QCEvent event) = case event of
     writeTVar' env DynsTVar $ TVDyns dyns
     writeTVar' env VertsTVar $ TVVerts verts
     modify $ \s → s { stReload = RSReload }
+  EventLoadFont fp → modify $ \s → s { stFont   = Just fp
+                                     , stReload = RSRecreate }
   EventTextures texmap → do
     modify $ \s → s { stTextures = texmap
                     , stReload   = RSRecreate }

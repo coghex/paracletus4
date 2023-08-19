@@ -7,9 +7,13 @@ module Vulk.VulkLoad where
 -- is spun off as a child thread
 import Prelude()
 import UPrelude
-import Control.Monad.State.Class (modify)
+import Control.Monad.State.Class (modify, gets)
 import Prog ( MonadIO(liftIO), Prog, MonadReader(ask) )
 import Sign.Var ( atomically, modifyTVar' )
+import Sign.Data ( LoadCmd(..) )
+import Sign.Util ( writeTVar', writeQueue' )
+import Prog.Data ( State(..), TVarName(..), TVarValue(..)
+                 , QueueName(..), QueueCmd(..) )
 import Prog.Util ( logDebug )
 import Vulk.Data ( TextureData(TextureData) )
 import Vulk.VulkData ( GQData(GQData) )
@@ -33,23 +37,24 @@ import Vulk.Pipeline ( createPipelineLayout )
 --   throw a vulkan error, i have no idea why
 loadVulkanTextures ∷ GQData → [FilePath] → Prog ε σ (TextureData)
 loadVulkanTextures (GQData pdev dev cmdPool cmdQueue) fps = do
-  -- the engine reserves the first few
-  -- textures for default usage.
-  let tex0Path     = "dat/tex/alpha.png"
-      tex1Path     = "dat/tex/texture.jpg"
-  -- tex zero is just 32x32 alpha
-  (textureView0, mipLevels0)
-    ← createTextureImageView pdev dev cmdPool cmdQueue tex0Path
-  textureSampler0 ← createTextureSampler dev mipLevels0
-  -- tex one is the vulkan tutorial image
-  (textureView1, mipLevels1)
-    ← createTextureImageView pdev dev cmdPool cmdQueue tex1Path
-  textureSampler1 ← createTextureSampler dev mipLevels1
   -- mod textures get added in by the lua files
   modTexViews ← createTextureImageViews pdev dev cmdPool cmdQueue fps
   texSamplersMod ← createTextureSamplers dev $ snd . unzip $ modTexViews
-  let texViews = fst (unzip modTexViews)
-      texSamps = texSamplersMod
+  fontPath ← gets stFont
+  (texViews,texSamps) ← case fontPath of
+    Nothing → return (fst (unzip modTexViews), texSamplersMod)
+    Just fp → do
+      logDebug $ "loading font " ⧺ fp
+      -- font texs are generated from ttf
+      fontData ← createFontImageViews pdev dev cmdPool cmdQueue fp 16
+      let (fontTexs, fontMetrics) = unzip fontData
+          (ftexs, fmipLvls) = unzip fontTexs
+      env ← ask
+      fontSamplers ← createTextureSamplers dev fmipLvls
+      let len = length ftexs
+      writeTVar' env FontSizeTVar $ TVInt len
+      writeQueue' LoadQueue $ QCLoadCmd $ LoadReload
+      return (ftexs ⧺ (fst (unzip modTexViews)), texSamplersMod ⧺ fontSamplers)
   descriptorTextureInfo ← textureImageInfos texViews texSamps
   depthFormat ← findDepthFormat pdev
   let nimages = length texViews

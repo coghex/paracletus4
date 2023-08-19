@@ -52,6 +52,10 @@ data Window = Window { winTitle ∷ String
 data WinElem = WinElemTile (Double,Double) (Double,Double)
              | WinElemNULL deriving (Show, Eq)
 
+-- | defines a section of text
+data Text = Text { textPos    ∷ (Double,Double)
+                 , textSize   ∷ (Double,Double)
+                 , textString ∷ String } deriving (Show, Eq)
 
 -- | status of the loading thread, allowing
 --   us to return results of deeply nested

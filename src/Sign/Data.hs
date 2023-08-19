@@ -4,7 +4,7 @@ module Sign.Data where
 import Prelude()
 import UPrelude
 import Data ( PrintArg(..), KeyMap(..), KeyFunc(..) )
-import Load.Data ( Tile, DrawState, TilePos, DynData(..), TextureMap(..) )
+import Load.Data ( Tile, DrawState, TilePos, DynData(..), TextureMap(..), Text(..) )
 import Vulk.Data ( Verts(..) )
 import qualified Data.Map as Map
 import qualified Vulk.GLFW as GLFW
@@ -31,6 +31,8 @@ data Event = EventError !GLFW.Error !String -- GLFW specific
            | EventLoad !LoadData
            -- | texture fp list from the load thread
            | EventTextures ![String]
+           -- | fonts are loaded differently every other texture
+           | EventLoadFont !String
            -- | changes to the settings
            | EventSettings !SettingsChange
            -- | lowest level actions go here
@@ -42,6 +44,7 @@ data LoadCmd = LoadNew LoadChunk
              | LoadState LoadStateChange | LoadReload | LoadRecreate | LoadTest
              | LoadCmdNULL deriving (Show, Eq)
 data LoadChunk = LCWindow String
+               | LCText String Text
                | LCTile String TilePos String
                | LCAtlas String TilePos String (Int,Int)
                | LCNULL deriving (Show, Eq)

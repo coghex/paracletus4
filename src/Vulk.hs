@@ -373,7 +373,7 @@ genCommandBuffs dev pdev commandPool queues graphicsPipeline renderPass
                           (TileTex (0,0) (1,1) 2)
                     ,Tile IDNULL (TilePos (3,3) (1,1))
                           (TileTex (0,0) (1,1) 3)]
-            dyns  = generateDynData tiles
+            dyns  = generateDynData 0 tiles
         writeTVar' env DynsTVar $ TVDyns dyns
         writeTVar' env VertsTVar $ TVVerts $ Verts res
         return res

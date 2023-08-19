@@ -12,12 +12,13 @@ import Control.Monad.Reader
 import System.Log.FastLogger
 import Data ( ID )
 import Load.Data ( DynData(..), TextureMap(..), Tex(..) )
-import Prog.Data ( Env(..), ChanName(..), QueueName(..), QueueCmd(..) )
+import Prog.Data ( Env(..), ChanName(..), QueueName(..), QueueCmd(..)
+                 , TVarName(..), TVarValue(..))
 import Sign.Data ( LogLevel(..), Event(..), TState(..), LoadCmd(..)
                  , SysAction(..), LoadData(..), SettingsChange(..) )
-import Sign.Var ( atomically, readTVar )
+import Sign.Var ( atomically )
 import Sign.Queue ( writeQueue, readChan, tryReadChan, writeChan )
-import Sign.Util ( readChan', writeQueue'', tryReadQueue'' )
+import Sign.Util ( readChan', writeQueue'', tryReadQueue'', readTVar'' )
 import Vulk.Font (TTFData(..))
 import Vulk.Data (Verts(..))
 import qualified Vulk.GLFW as GLFW
@@ -138,3 +139,17 @@ sendTextures ∷ (MonadLog μ, MonadFail μ) ⇒ [(String,Tex)] → μ ()
 sendTextures tm = do
   (Log _   env _   _   _) ← askLog
   liftIO $ writeQueue'' env EventQueue $ QCEvent $ EventTextures $ map (tfp ⊚ snd) tm
+-- | reads a tvar
+readTVar ∷ (MonadLog μ, MonadFail μ) ⇒ TVarName → μ (Maybe TVarValue)
+readTVar tvar = do
+  (Log _   env _   _   _) ← askLog
+  liftIO $ readTVar'' env tvar
+-- | reads the font size tvar
+readFontSize ∷ (MonadLog μ, MonadFail μ) ⇒ μ Int
+readFontSize = do
+  -- first we check to see if we loaded a font
+  fontSize ← readTVar FontSizeTVar
+  case fontSize of
+    Nothing         → return 0
+    Just (TVInt fs) → return fs
+    Just _          → return 0

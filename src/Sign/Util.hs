@@ -103,3 +103,11 @@ writeTVar' env name val = case findTVar env name of
     log'' LogError $ "no tvar " ⧺ show name
     return ()
   Just v0 → liftIO . atomically $ writeTVar v0 $ Just val
+-- | reads a TVar in the IO context
+readTVar'' ∷ Env → TVarName → IO (Maybe TVarValue)
+readTVar'' env tvar = case findTVar env tvar of
+  Nothing → do
+    log' env LogError $ "no tvar " ⧺ show tvar
+    return Nothing
+  Just v0 → liftIO . atomically $ readTVar v0
+
