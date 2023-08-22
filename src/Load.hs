@@ -80,23 +80,23 @@ processCommands ds = do
           -- sends the verts and dyns to the main thread
           DSSReload → do
             fontsize ← readFontSize
-            log' (LogDebug 1) $ "[Load] regenerating dyns"
-            let tiles = (shTiles fontsize (dsShell ds')) ⧺ findTiles fontsize (dsCurr ds) (dsWins ds)
+            ttfdata ← readFontMapM
+            let tiles = (shTiles fontsize ttfdata (dsShell ds')) ⧺ findTiles fontsize (dsCurr ds) (dsWins ds)
                 dyns  = generateDynData tiles
             modifyTVar DynsTVar $ TVDyns dyns
-            sendSys SysReload
-            processCommands ds' { dsStatus = DSSNULL } -- , dsDyns = dyns }
+            processCommands ds' { dsStatus = DSSNULL }
           DSSRecreate → do
             fontsize ← readFontSize
+            ttfdata ← readFontMapM
             log' (LogDebug 1) $ "[Load] regenerating verts and dyns"
             -- TODO: find why we need to reverse this
             let verts = Verts $ calcVertices $ reverse tiles
-                tiles = (shTiles fontsize (dsShell ds')) ⧺ findTiles fontsize (dsCurr ds) (dsWins ds)
+                tiles = (shTiles fontsize ttfdata (dsShell ds')) ⧺ findTiles fontsize (dsCurr ds) (dsWins ds)
                 dyns  = generateDynData tiles
             modifyTVar VertsTVar $ TVVerts verts
             modifyTVar DynsTVar $ TVDyns dyns
             sendSys SysRecreate
-            processCommands ds' { dsStatus = DSSNULL } --, dsDyns = dyns }
+            processCommands ds' { dsStatus = DSSNULL }
           DSSNULL   → processCommands ds'
         LoadResultError str     → do
           log' LogError $ "load command error: " ⧺ str

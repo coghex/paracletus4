@@ -57,10 +57,12 @@ initEnv = do
   -- putting it first in the list of textures and different fonts
   -- with different sizes can be loaded
   fsTV     ← atomically $ newTVar Nothing
+  -- we also need to keep track of the font hinting data
+  fmTV     ← atomically $ newTVar Nothing
   let env = Env { envQueues = Queues queues3
                 , envChans  = Chans chans3
                 , envIDChan = idCh
-                , envTVars  = TVars tvars3
+                , envTVars  = TVars tvars4
                 , envLuaSt  = luaSt }
       queues0 = Map.empty
       queues1 = Map.insert EventQueue eventQ  queues0
@@ -74,6 +76,7 @@ initEnv = do
       tvars1  = Map.insert VertsTVar    vertsTV tvars0
       tvars2  = Map.insert DynsTVar     dynsTV  tvars1
       tvars3  = Map.insert FontSizeTVar fsTV    tvars2
+      tvars4  = Map.insert FontMapTVar  fmTV    tvars3
   -- and env that can be accessed transactionally
   envChan ← atomically $ newTVar env
   -- we return both so that initState doesnt need to load the TVar

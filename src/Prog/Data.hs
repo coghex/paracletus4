@@ -15,6 +15,7 @@ import Data ( FPS, ID )
 import Data.Time.Clock.System ( SystemTime )
 import Data.Map (Map)
 import Vulk.Data ( Verts )
+import Vulk.Font ( TTFData )
 import qualified HsLua as Lua
 import qualified Vulk.GLFW as GLFW
 
@@ -48,7 +49,8 @@ data ChanName  = LuaChan | InputChan | LoadChan | IDChan
 -- | dynamic collection of tvars
 data TVars     = TVars { tm ∷ Map TVarName (TVar (Maybe TVarValue)) }
 data TVarValue = TVInt Int | TVString String | TVVerts Verts | TVDyns [DynData]
-data TVarName  = WindowTVar | VertsTVar | DynsTVar | FontSizeTVar
+               | TVFontMap [TTFData] deriving (Show, Eq)
+data TVarName  = WindowTVar | VertsTVar | DynsTVar | FontSizeTVar | FontMapTVar
                | CustomTVar Int deriving (Show, Eq, Ord)
 
 -- | state holds mutable data, and the

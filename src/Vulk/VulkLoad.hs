@@ -9,9 +9,9 @@ import Prelude()
 import UPrelude
 import Control.Monad.State.Class (modify, gets)
 import Prog ( MonadIO(liftIO), Prog, MonadReader(ask) )
-import Sign.Var ( atomically, modifyTVar' )
+import Sign.Var ( atomically )
 import Sign.Data ( LoadCmd(..) )
-import Sign.Util ( writeTVar', writeQueue' )
+import Sign.Util ( writeTVar', writeQueue', modifyTVar )
 import Prog.Data ( State(..), TVarName(..), TVarValue(..)
                  , QueueName(..), QueueCmd(..) )
 import Prog.Util ( logDebug )
@@ -50,13 +50,14 @@ loadVulkanTextures (GQData pdev dev cmdPool cmdQueue) fps = do
       let (fontTexs, fontMetrics) = unzip fontData
           (ftexs, fmipLvls) = unzip fontTexs
       env ← ask
+      modifyTVar env FontMapTVar $ TVFontMap fontMetrics
       fontSamplers ← createTextureSamplers dev fmipLvls
       -- box texs are for the shell
       let texBoxPath = "dat/tex/box"
       boxTexs ← loadNTexs pdev dev cmdPool cmdQueue texBoxPath
       let (btexs, bsamps) = unzip boxTexs
           len = (length ftexs) + (length btexs)
-      writeTVar' env FontSizeTVar $ TVInt len
+      modifyTVar env FontSizeTVar $ TVInt len
       writeQueue' LoadQueue $ QCLoadCmd $ LoadReload
       return (ftexs ⧺ btexs ⧺ (fst (unzip modTexViews))
              ,fontSamplers ⧺ bsamps ⧺ texSamplersMod)

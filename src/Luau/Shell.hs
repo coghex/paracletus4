@@ -2,14 +2,72 @@
 module Luau.Shell where
 import Prelude()
 import UPrelude
+import Data.List.Split ( splitOn )
 import Data ( Shell(..), ID(..) )
 import Load.Data ( Tile(..), TilePos(..), TileTex(..) )
+import Vulk.Font ( indexTTFData, TTFData(..), GlyphMetrics(..) )
 
 toggleShell ∷ Shell → Shell
 toggleShell shell = shell { shLoaded = not (shLoaded shell) }
 
-shTiles ∷ Int → Shell → [Tile]
-shTiles fontsize sh  = tiles
+-- | a combination of every tile needed for the shell
+shTiles ∷ Int → [TTFData] → Shell → [Tile]
+shTiles fontsize ttfdata sh = tiles
+  where tiles    = txttiles ⧺ boxtiles
+        pos      = (-10,5)
+        boxtiles = boxTiles fontsize pos sh
+        txttiles = txtTiles fontsize ttfdata pos sh 256
+
+-- | every tile needed for the text, fills the rest with empty buffer
+txtTiles ∷ Int → [TTFData] → (Double,Double) → Shell → Int → [Tile]
+txtTiles fontsize ttfdata pos sh buffSize = case shLoaded sh of
+  False → take buffSize $ repeat
+    (Tile IDNULL (TilePos (0,0) (1,1)) (TileTex (0,0) (1,1) fontsize))
+  True  → tiles ⧺ take (buffSize - length tiles)
+    (repeat (Tile IDNULL (TilePos (0,0) (1,1)) (TileTex (0,0) (1,1) fontsize)))
+    where tiles  = genStringTiles fontsize ttfdata (fst pos') pos' string
+          string = genShellStr sh
+          pos'   = (fst pos + 1, snd pos - 1)
+
+-- | generates the tiles for a singe string
+genStringTiles ∷ Int → [TTFData] → Double → (Double,Double) → String → [Tile]
+genStringTiles _        _       _  _     []         = []
+genStringTiles fontsize ttfdata x0 (x,y) (' ':str)
+  = genStringTiles fontsize ttfdata x0 (x+0.1,y) str
+genStringTiles fontsize ttfdata x0 (_,y) ('\n':str)
+  = genStringTiles fontsize ttfdata x0 (x0,y-1) str
+genStringTiles fontsize ttfdata x0 (x,y) (ch:str)   = case indexTTFData ttfdata ch of
+  Nothing → genStringTiles fontsize ttfdata x0 (x,y) str
+  Just (TTFData _ chInd (GlyphMetrics chW chH chX chY chA))
+    → tile : genStringTiles fontsize ttfdata x0 (x+(2*chA),y) str
+      where tile = Tile IDNULL (TilePos (x',y') (w',h'))
+                               (TileTex (0,0) (1,1) chInd)
+            (x',y') = (realToFrac(x+(2*chX)+chW)
+                      ,realToFrac(y+(2*chY)-chH-0.1))
+            (w',h') = (realToFrac chW
+                      ,realToFrac chH)
+
+-- | the shells state as a string
+genShellStr ∷ Shell → String
+genShellStr sh
+  | (height > 8) = shortret
+  | otherwise    = retstring
+  where prompt    = shPrompt sh
+        strsout   = genShellOut (shOutStr sh) (shRet sh)
+        strsin    = shInpStr sh
+        height    = length $ filter (≡ '\n') retstring
+        retstring = strsout ⧺ prompt ⧺ strsin
+        shortret  = flattenWith '\n' $ drop (height - 8) (splitOn "\n" retstring)
+        flattenWith ∷ Char → [String] → String
+        flattenWith _  []         = ""
+        flattenWith ch (str:strs) = str ⧺ [ch] ⧺ flattenWith ch strs
+genShellOut ∷ String → String → String
+genShellOut out ""  = out
+genShellOut out ret = (init out) ⧺ "> " ⧺ ret ⧺ "\n"
+
+-- | a list of tiles that makes a box
+boxTiles ∷ Int → (Double,Double) → Shell → [Tile]
+boxTiles fontsize pos sh  = tiles
     where pos        = (-10,5)
           width      = 8
           height     = 2

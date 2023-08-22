@@ -165,3 +165,13 @@ readFontSize = do
     Nothing         → return 0
     Just (TVInt fs) → return fs
     Just _          → return 0
+
+-- | reads the current key layout
+readFontMapM ∷ (MonadLog μ, MonadFail μ) ⇒ LogT μ [TTFData]
+readFontMapM = do
+  (Log _   env _   _   _) ← askLog
+  fontMap ← readTVar FontMapTVar
+  case fontMap of
+    Nothing              -> return []
+    Just (TVFontMap tvv) -> return tvv
+
