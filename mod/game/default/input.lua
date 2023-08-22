@@ -20,4 +20,5 @@ function initInput ()
 end
 
 keySetts = { keyEscape = "ESC,CAP"
-           , keyTest   = "T" }
+           , keyTest   = "T"
+           , keyShell  = "`" }

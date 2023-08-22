@@ -5,6 +5,7 @@ import Prelude()
 import UPrelude
 import Data ( PrintArg(..), KeyMap(..), KeyFunc(..) )
 import Load.Data ( Tile, DrawState, TilePos, DynData(..), TextureMap(..), Text(..) )
+import Luau.Data ( ShellCmd(..) )
 import Vulk.Data ( Verts(..) )
 import qualified Data.Map as Map
 import qualified Vulk.GLFW as GLFW
@@ -27,8 +28,6 @@ data Event = EventError !GLFW.Error !String -- GLFW specific
            | EventLog !LogLevel !String
            -- | key/mouse input, mostly from GLFW callbacks
            | EventInput !InputEvent
-           -- | verticies, indicies, and dynamic data from the load thread
-           | EventLoad !LoadData
            -- | texture fp list from the load thread
            | EventTextures ![String]
            -- | fonts are loaded differently every other texture
@@ -37,10 +36,11 @@ data Event = EventError !GLFW.Error !String -- GLFW specific
            | EventSettings !SettingsChange
            -- | lowest level actions go here
            | EventSys !SysAction
+           | EventTest
            deriving (Show, Eq)
 
 -- | possible commands load thread can handle
-data LoadCmd = LoadNew LoadChunk
+data LoadCmd = LoadNew LoadChunk | LoadShell ShellCmd
              | LoadState LoadStateChange | LoadReload | LoadRecreate | LoadTest
              | LoadCmdNULL deriving (Show, Eq)
 data LoadChunk = LCWindow String
@@ -79,9 +79,6 @@ data InputStateChange = ISCRegisterKeys String | ISCNULL deriving (Show, Eq)
 
 -- | input state is simply the state of the input thread
 data InputState = InputState { keyMap ∷ KeyMap } deriving (Show, Eq)
-
--- | data gets loaded in from a seperate thread
-data LoadData = LoadData !Verts ![DynData] deriving (Show,Eq)
 
 -- | commands for functionality at the lowest level
 data SysAction = SysRecreate | SysReload

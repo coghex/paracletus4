@@ -5,13 +5,13 @@ module Prog.Input where
 -- a thread to handle input
 import Prelude()
 import UPrelude
-import Data ( KeyFunc(..), KeyMap(..), PopupType(..), Cardinal(..) )
+import Data ( KeyFunc(..), KeyMap(..), PopupType(..), Cardinal(..), Shell(..) )
 import qualified Data.Map as Map
 import qualified Data.Aeson as A
 import Data.Maybe ( fromMaybe )
 import Data.String ( fromString )
 import qualified Data.Map as Map
-import Luau.Data ( InputJson(..), KeySettings(..) )
+import Luau.Data ( InputJson(..), KeySettings(..), ShellCmd(..) )
 import Prog.Data
     ( Env(..), QueueName(..)
     , ChanName(..), QueueCmd(..) )
@@ -108,13 +108,16 @@ processKey env key ks mk is = do
         writeQueue'' env EventQueue $ QCEvent $ EventSys SysExit
       KFTest → do
         writeQueue'' env LoadQueue $ QCLoadCmd LoadTest
+      KFShell → do
+        writeQueue'' env LoadQueue $ QCLoadCmd $ LoadShell ShToggle
       keyFunc → return ()
 
 createKeyMap ∷ KeySettings → KeyMap
-createKeyMap (KeySettings kEscape kTest) = km
-  where km         = KeyMap km1
+createKeyMap (KeySettings kEscape kTest kShell) = km
+  where km         = KeyMap km2
         km0        = Map.insert KFEscape (GLFW.getGLFWKeys kEscape) Map.empty
         km1        = Map.insert KFTest   (GLFW.getGLFWKeys kTest)   km0
+        km2        = Map.insert KFShell  (GLFW.getGLFWKeys kShell)  km1
 
 initInputState ∷ InputState
 initInputState = InputState { keyMap = KeyMap Map.empty }

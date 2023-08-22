@@ -18,6 +18,7 @@ import Sign.Var ( atomically, readTVar )
 import Sign.Util ( writeQueue'' )
 import Load.Data ( Tile(..), TilePos(..), TileTex(..), Text(..) )
 import Luau.Util ( vtail, vhead, luaEvent )
+import Luau.Data ( ShellCmd(..) )
 
 -- | quits everything using glfw
 hsExit ∷ Env → Lua.Lua ()
@@ -85,16 +86,15 @@ hsNewText env x y w h win text = do
 -- | reloads the command buffers of the engine
 hsReload ∷ Env → Lua.Lua ()
 hsReload env = Lua.liftIO $ writeQueue'' env LoadQueue
-  $ QCLoadCmd $ LoadReload
+  $ QCLoadCmd LoadReload
 
 -- | reloads the command buffers of the engine
 hsRecreate ∷ Env → Lua.Lua ()
 hsRecreate env = Lua.liftIO $ writeQueue'' env LoadQueue
-  $ QCLoadCmd $ LoadRecreate
+  $ QCLoadCmd LoadRecreate
 
 -- | sends the font string to the main thread where we send
 --   a font load cmd to the load thread
 hsLoadFont ∷ Env → String → Lua.Lua ()
 hsLoadFont env fp = Lua.liftIO $ writeQueue'' env EventQueue
   $ QCEvent $ EventLoadFont fp
-

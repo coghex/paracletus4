@@ -9,7 +9,7 @@ module Load where
 -- a thread to help recreate the swapchain
 import Prelude ()
 import UPrelude
-import Data ( PrintArg(PrintNULL), Color(..), ID(..) )
+import Data ( PrintArg(PrintNULL), Color(..), ID(..), Shell(..) )
 import Data.Aeson as A
 import Data.Maybe ( fromMaybe )
 import Data.List.Split ( splitOn )
@@ -17,6 +17,8 @@ import Data.Map as Map
 import Data.String ( fromString )
 import Load.Data
 import Load.Util ( emptyTiles )
+import Luau.Shell ( toggleShell, shTiles )
+import Luau.Data ( ShellCmd(..) )
 import Prog.Data
 import Prog.Buff ( generateDynData )
 import Sign.Data
@@ -78,22 +80,23 @@ processCommands ds = do
           -- sends the verts and dyns to the main thread
           DSSReload → do
             fontsize ← readFontSize
+            log' (LogDebug 1) $ "[Load] regenerating dyns"
+            let tiles = (shTiles fontsize (dsShell ds')) ⧺ findTiles fontsize (dsCurr ds) (dsWins ds)
+                dyns  = generateDynData tiles
+            modifyTVar DynsTVar $ TVDyns dyns
+            sendSys SysReload
+            processCommands ds' { dsStatus = DSSNULL } -- , dsDyns = dyns }
+          DSSRecreate → do
+            fontsize ← readFontSize
             log' (LogDebug 1) $ "[Load] regenerating verts and dyns"
             -- TODO: find why we need to reverse this
             let verts = Verts $ calcVertices $ reverse tiles
-                tiles = dsTiles ds
-                dyns  = generateDynData fontsize tiles
-            sendLoadEvent verts dyns
-            processCommands ds' { dsStatus = DSSNULL, dsDyns = dyns }
-          DSSRecreate → do
-            fontsize ← readFontSize
-            log' (LogDebug 1) $ "[Load] recreating swapchain"
-            let verts = Verts $ calcVertices $ reverse tiles
-                tiles = dsTiles ds
-                dyns  = generateDynData fontsize tiles
-            sendLoadEvent verts dyns
+                tiles = (shTiles fontsize (dsShell ds')) ⧺ findTiles fontsize (dsCurr ds) (dsWins ds)
+                dyns  = generateDynData tiles
+            modifyTVar VertsTVar $ TVVerts verts
+            modifyTVar DynsTVar $ TVDyns dyns
             sendSys SysRecreate
-            processCommands ds' { dsStatus = DSSNULL, dsDyns = dyns }
+            processCommands ds' { dsStatus = DSSNULL } --, dsDyns = dyns }
           DSSNULL   → processCommands ds'
         LoadResultError str     → do
           log' LogError $ "load command error: " ⧺ str
@@ -103,6 +106,22 @@ processCommands ds = do
           return ds
     Nothing → return ds
 
+-- | returns the tiles in the current window
+findTiles ∷ Int → String → Map.Map String Window → [Tile]
+findTiles fontsize win wins = case Map.lookup win wins of
+  Nothing → []
+  Just w0 → generateWinTiles fontsize (winElems w0)
+-- | returns the tiles in a list of elements
+generateWinTiles ∷ Int → [WinElem] → [Tile]
+generateWinTiles _        []       = []
+generateWinTiles fontsize (we:wes) = tiles ⧺ generateWinTiles fontsize wes
+  where tiles = generateElemTiles fontsize we
+generateElemTiles ∷ Int → WinElem → [Tile]
+generateElemTiles fontsize (WinElemTile tile) = [tile']
+  where Tile id tp (TileTex tind tsiz t) = tile
+        tile'                         = Tile id tp (TileTex tind tsiz (t + fontsize))
+generateElemTiles fontsize (WinElemText text) = [Tile IDNULL (TilePos (0,0) (1,1)) (TileTex (0,0) (1,1) fontsize)]
+generateElemTiles _        WinElemNULL        = []
 
 -- | this is the case statement for processing load commands
 processCommand ∷ (MonadLog μ,MonadFail μ)
@@ -119,7 +138,7 @@ processCommand ds cmd = case cmd of
     let wins = dsWins ds
         curr = dsCurr ds
     case Map.lookup name wins of
-      Just w0 → if (curr ≡ name) then do
+      Just _ → if curr ≡ name then do
           log' LogInfo $ "[Load] window " ⧺ name ⧺ " already selected"
           return LoadResultSuccess
         else
@@ -129,10 +148,12 @@ processCommand ds cmd = case cmd of
         log' LogWarn $ "[Load] window " ⧺ name ⧺ " doesnt exist"
         return LoadResultSuccess
   LoadTest → do
-    fontsize ← readFontSize
-    log' (LogDebug 1) $ "[***Test***] fontsize: " ⧺ show fontsize
-    return $ LoadResultDrawState $ ds { dsStatus = DSSRecreate }
+        sendTest
+        return LoadResultSuccess
   LoadNew lc → newChunk ds lc
+  LoadShell ShToggle → return $ LoadResultDrawState
+      $ ds { dsShell  = toggleShell (dsShell ds)
+           , dsStatus = DSSReload }
   LoadReload → do
     return $ LoadResultDrawState ds { dsStatus = DSSReload }
   LoadRecreate → do
@@ -159,9 +180,9 @@ newChunk ds (LCAtlas win pos tex tind) = do
       tt            = findAtlas tind tex tm
   writeIDChan id0
   return $ LoadResultDrawState $ newTile ds win tile
-newChunk ds (LCText win (Text pos size text)) = do
+newChunk ds (LCText win (Text pos siz text)) = do
   id0 ← liftIO newID
-  let tile = Tile id0 (TilePos pos size) $ TileTex (0,0) (1,1) (-10)
+  let tile = Tile id0 (TilePos pos siz) $ TileTex (0,0) (1,1) (-10)
   writeIDChan id0
   return $ LoadResultDrawState $ newTile ds win tile
 newChunk _  LCNULL                     = return LoadResultSuccess
@@ -171,12 +192,14 @@ newChunk _  lc                         = do
 
 -- | adds a new tile to a window
 newTile ∷ DrawState → String → Tile → DrawState
-newTile ds win tile = ds { dsTiles = tile : (dsTiles ds) }
+newTile ds win tile = ds { dsWins = addTileToWin (dsWins ds) win tile }
 -- { dsWins = addTileToWin (dsWins ds) win tile }
 addTileToWin ∷ Map.Map String Window → String → Tile → Map.Map String Window
 addTileToWin wins win tile = case Map.lookup win wins of
   Nothing → wins
-  Just w0 → Map.insert win win' wins where win' = w0
+  Just w0 → Map.insert win win' wins
+    where win' = w0 { winElems = e : (winElems w0) }
+          e    = WinElemTile tile
 
 -- | converts tex to tiletex at input tex n
 findTex ∷ String → [(String,Tex)] → TileTex
@@ -223,5 +246,7 @@ createTextureAtlasMap n ((AtlasData name fp w h):tds)
 
 -- | initial draw state
 initDrawState ∷ DrawState
-initDrawState = DrawState DSSNULL (TextureMap []) [] [] Map.empty []
-
+initDrawState = DrawState DSSNULL (TextureMap []) Map.empty [] initShell
+-- | creates a shell with empty values
+initShell ∷ Shell
+initShell = Shell "$> " Nothing 1 "" "" "" "" False (-1) []

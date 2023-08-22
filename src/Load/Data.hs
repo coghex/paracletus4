@@ -6,7 +6,7 @@ module Load.Data where
 -- data for the loading thread is found
 import Prelude()
 import UPrelude
-import Data ( ID )
+import Data ( ID, Shell )
 import Data.Aeson
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -34,14 +34,12 @@ data DrawState = DrawState
   { dsStatus    ∷ DSStatus -- ^ return status for thread
   -- | each texture has a fp and size
   , dsTexMap    ∷ TextureMap
-  -- | abstract tiles contain 
-  , dsTiles     ∷ [Tile]
-  -- | list of dyns in same order as tiles
-  , dsDyns      ∷ [DynData]
   -- | list of window objects
   , dsWins      ∷ Map.Map String Window
   -- | current window
   , dsCurr      ∷ String
+  -- | the shell is completely seperate from all windowing
+  , dsShell     ∷ Shell
   } deriving (Show, Eq)
 
 -- | windows contain elements that get converted to tiles and dyns
@@ -49,7 +47,8 @@ data Window = Window { winTitle ∷ String
                      , winElems ∷ [WinElem]
                      } deriving (Show, Eq)
 -- | window elements define various things that can be interacted with
-data WinElem = WinElemTile (Double,Double) (Double,Double)
+data WinElem = WinElemTile Tile
+             | WinElemText Text
              | WinElemNULL deriving (Show, Eq)
 
 -- | defines a section of text

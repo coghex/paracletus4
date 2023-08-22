@@ -19,6 +19,8 @@ readTVarIO  ∷ TVar α → IO α
 readTVarIO  = STM.readTVarIO
 writeTVar   ∷ TVar α → α → STM.STM ()
 writeTVar   = STM.writeTVar
+swapTVar    ∷ TVar α → α → STM.STM α
+swapTVar    = STM.swapTVar
 -- | taken from a random hackage
 --   module i saw. strict,
 --   requires bangpatterns

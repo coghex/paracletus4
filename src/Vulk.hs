@@ -32,7 +32,7 @@ import Sign.Data ( TState(..) )
 import Sign.Except ( testEx, ExType(ExVulk) )
 import Sign.Var
     ( atomically, modifyTVar', newTVar, readTVar, writeTVar )
-import Sign.Util ( readTVar', writeTVar', writeChan' )
+import Sign.Util ( readTVar', writeTVar', writeChan', modifyTVar )
 import Vulk.Buff ( createIndexBuffer, createVertexBuffer )
 import Vulk.Command ( createCommandPool )
 import Vulk.Calc ( calcVertices )
@@ -373,9 +373,9 @@ genCommandBuffs dev pdev commandPool queues graphicsPipeline renderPass
                           (TileTex (0,0) (1,1) 2)
                     ,Tile IDNULL (TilePos (3,3) (1,1))
                           (TileTex (0,0) (1,1) 3)]
-            dyns  = generateDynData 0 tiles
-        writeTVar' env DynsTVar $ TVDyns dyns
-        writeTVar' env VertsTVar $ TVVerts $ Verts res
+            dyns  = generateDynData tiles
+        modifyTVar env DynsTVar $ TVDyns dyns
+        modifyTVar env VertsTVar $ TVVerts $ Verts res
         return res
       Just (TVVerts (Verts vs)) → return vs
     vertexBufferNew

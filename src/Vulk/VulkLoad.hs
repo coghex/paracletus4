@@ -51,10 +51,15 @@ loadVulkanTextures (GQData pdev dev cmdPool cmdQueue) fps = do
           (ftexs, fmipLvls) = unzip fontTexs
       env ← ask
       fontSamplers ← createTextureSamplers dev fmipLvls
-      let len = length ftexs
+      -- box texs are for the shell
+      let texBoxPath = "dat/tex/box"
+      boxTexs ← loadNTexs pdev dev cmdPool cmdQueue texBoxPath
+      let (btexs, bsamps) = unzip boxTexs
+          len = (length ftexs) + (length btexs)
       writeTVar' env FontSizeTVar $ TVInt len
       writeQueue' LoadQueue $ QCLoadCmd $ LoadReload
-      return (ftexs ⧺ (fst (unzip modTexViews)), texSamplersMod ⧺ fontSamplers)
+      return (ftexs ⧺ btexs ⧺ (fst (unzip modTexViews))
+             ,fontSamplers ⧺ bsamps ⧺ texSamplersMod)
   descriptorTextureInfo ← textureImageInfos texViews texSamps
   depthFormat ← findDepthFormat pdev
   let nimages = length texViews

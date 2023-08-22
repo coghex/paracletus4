@@ -18,25 +18,19 @@ instance ToJSON   InputJson where
     pairs ("keySettings" .= keySettings)
 
 data KeySettings = KeySettings { keyEscape ∷ String
-                               , keyTest   ∷ String }
+                               , keyTest   ∷ String
+                               , keyShell  ∷ String }
                                deriving (Generic, Show)
 instance FromJSON KeySettings where
   parseJSON = withObject "keySettings" $ \v -> KeySettings
         <$> v .: "keyEscape"
         <*> v .: "keyTest"
+        <*> v .: "keyShell"
 instance ToJSON   KeySettings where
-    toJSON (KeySettings keyEscape keyTest) =
-        object ["keyEscape" .= keyEscape, "keyTest" .= keyTest]
-    toEncoding (KeySettings keyEscape keyTest) =
-        pairs ("keyEscape" .= keyEscape <> "keyTest" .= keyTest)
+    toJSON (KeySettings keyEscape keyTest keyShell) =
+        object ["keyEscape" .= keyEscape, "keyTest" .= keyTest, "keyShell" .= keyShell]
+    toEncoding (KeySettings keyEscape keyTest keyShell) =
+        pairs ("keyEscape" .= keyEscape <> "keyTest" .= keyTest <> "keyShell" .= keyShell)
 
----- | abstract window
---data Window = Window { winTitle  ∷ String
---                     , winSize   ∷ (Int,Int)
---                     , winPages  ∷ [Page]
---                     } deriving (Show, Eq)
---
----- | each window contains pages, each page contains winElems
---data Page = Page { pageTitle  ∷ String
---                 } deriving (Show, Eq)
---
+-- | possible commands to send the shell
+data ShellCmd = ShToggle | ShNULL deriving (Show, Eq)

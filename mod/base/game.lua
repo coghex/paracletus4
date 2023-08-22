@@ -49,3 +49,6 @@ end
 function game.loadFont(str)
     rawLoadFont(str)
 end
+function game.initShell()
+    rawInitShell()
+end

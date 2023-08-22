@@ -12,8 +12,8 @@ function initMod ()
     initTextures ()
     m = initMenu ()
     game.selectWin (m)
-    game.recreate ()
+    game.recreate()
 end
 function runMod ()
-    game.logDebug("default mod: runMod()")
+    --game.logDebug("default mod: runMod()")
 end

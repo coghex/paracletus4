@@ -14,10 +14,10 @@ import Prog.Data (Env(..), State(..), ReloadState(..), QueueCmd(..), QueueName(.
                   TVarName(..), TVarValue(..))
 import Prog.Util ( logCommand )
 import Sign.Data
-    ( Event(..), LogLevel(..), SysAction(..), InpCmd(..), LoadData(..), LoadCmd(..) )
+    ( Event(..), LogLevel(..), SysAction(..), InpCmd(..), LoadCmd(..) )
 import Sign.Except ( ExType(ExVulk) )
 import Sign.Var ( atomically, modifyTVar' )
-import Sign.Util ( tryReadQueue', writeQueue', log'', writeTVar')
+import Sign.Util ( tryReadQueue', writeQueue', log'', writeTVar', readTVar')
 
 -- | reads event channel, then exectutes events recursively
 processEvents ∷ Prog ε σ ()
@@ -44,15 +44,17 @@ processEvent (QCEvent event) = case event of
   EventSys sysEvent    → log'' LogWarn $ "Unknown sysaction: " ⧺ show event
   EventLog level str   → logCommand level str
   EventInput inpEvent  → writeQueue' InputQueue $ QCInpCmd $ InpEvent inpEvent
-  EventLoad (LoadData verts dyns) → do
-    env ← ask
-    writeTVar' env DynsTVar $ TVDyns dyns
-    writeTVar' env VertsTVar $ TVVerts verts
-    modify $ \s → s { stReload = RSReload }
   EventLoadFont fp → modify $ \s → s { stFont   = Just fp
                                      , stReload = RSRecreate }
   EventTextures texmap → do
     modify $ \s → s { stTextures = texmap
                     , stReload   = RSRecreate }
+  EventTest → do
+    env ← ask
+    dyns ← readTVar' env DynsTVar
+    case dyns of
+      Nothing          → logCommand LogWarn "no dyns"
+      Just (TVDyns d0) → logCommand (LogDebug 1) $ "len: " ⧺ show d0
+      Just _           → logCommand LogWarn "junk in dyns"
   _                   → log'' LogError $ "Unknown event: " ⧺ show event
 processEvent _               = return ()

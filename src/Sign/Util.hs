@@ -10,7 +10,7 @@ import Prog.Data
   ( Env(..), QueueName(..), Queues(..), QueueCmd(..), ChanName(..), Chans(..)
   , TVars(..), TVarName(..), TVarValue(..) )
 import Sign.Data (LogLevel(..), Event (EventLog), TState(..) )
-import Sign.Var (TVar(..), atomically, newTVar, readTVar, writeTVar)
+import Sign.Var (TVar(..), atomically, newTVar, readTVarIO, writeTVar, modifyTVar')
 import Sign.Queue (newQueue, writeQueue, tryReadQueue, tryReadChan,
                    writeChan, Queue(..), TChan(..))
 import qualified Data.Map as M
@@ -95,7 +95,7 @@ readTVar' env tvar = case findTVar env tvar of
   Nothing → do
     log'' LogError $ "no tvar " ⧺ show tvar
     return Nothing
-  Just v0 → liftIO . atomically $ readTVar v0
+  Just v0 → liftIO $ readTVarIO v0
 -- | writes a TVar
 writeTVar' ∷ Env → TVarName → TVarValue → Prog ε σ ()
 writeTVar' env name val = case findTVar env name of
@@ -103,11 +103,31 @@ writeTVar' env name val = case findTVar env name of
     log'' LogError $ "no tvar " ⧺ show name
     return ()
   Just v0 → liftIO . atomically $ writeTVar v0 $ Just val
+-- | modifies a tvar
+modifyTVar ∷ Env → TVarName → TVarValue → Prog ε σ ()
+modifyTVar env name val = case findTVar env name of
+  Nothing → do
+    log'' LogError $ "no tvar " ⧺ show name
+    return ()
+  Just v0 → liftIO . atomically $ modifyTVar' v0 $ \_ → Just val
 -- | reads a TVar in the IO context
 readTVar'' ∷ Env → TVarName → IO (Maybe TVarValue)
 readTVar'' env tvar = case findTVar env tvar of
   Nothing → do
     log' env LogError $ "no tvar " ⧺ show tvar
     return Nothing
-  Just v0 → liftIO . atomically $ readTVar v0
-
+  Just v0 → liftIO $ readTVarIO v0
+-- | writes a TVar in the IO context
+writeTVar'' ∷ Env → TVarName → TVarValue → IO ()
+writeTVar'' env name val = case findTVar env name of
+  Nothing → do
+    log' env LogError $ "no tvar " ⧺ show name
+    return ()
+  Just v0 → liftIO . atomically $ writeTVar v0 $ Just val
+-- | swaps a TVar in the IO context
+modifyTVar'' ∷ Env → TVarName → TVarValue → IO ()
+modifyTVar'' env name val = case findTVar env name of
+  Nothing → do
+    log' env LogError $ "no tvar " ⧺ show name
+    return ()
+  Just v0 → liftIO . atomically $ modifyTVar' v0 $ \_ → Just val

@@ -15,10 +15,11 @@ import Load.Data ( DynData(..), TextureMap(..), Tex(..) )
 import Prog.Data ( Env(..), ChanName(..), QueueName(..), QueueCmd(..)
                  , TVarName(..), TVarValue(..))
 import Sign.Data ( LogLevel(..), Event(..), TState(..), LoadCmd(..)
-                 , SysAction(..), LoadData(..), SettingsChange(..) )
+                 , SysAction(..), SettingsChange(..) )
 import Sign.Var ( atomically )
 import Sign.Queue ( writeQueue, readChan, tryReadChan, writeChan )
-import Sign.Util ( readChan', writeQueue'', tryReadQueue'', readTVar'' )
+import Sign.Util ( readChan', writeQueue'', tryReadQueue'', readTVar''
+                 , writeTVar'', modifyTVar'' )
 import Vulk.Font (TTFData(..))
 import Vulk.Data (Verts(..))
 import qualified Vulk.GLFW as GLFW
@@ -129,21 +130,32 @@ sendSys ∷ (MonadLog μ, MonadFail μ) ⇒ SysAction → μ ()
 sendSys sa = do
   (Log _   env _   _   _) ← askLog
   liftIO $ writeQueue'' env EventQueue $ QCEvent $ EventSys sa
--- | sends a load event over the event queue
-sendLoadEvent ∷ (MonadLog μ, MonadFail μ) ⇒ Verts → [DynData] → μ ()
-sendLoadEvent verts dyns = do
-  (Log _   env _   _   _) ← askLog
-  liftIO $ writeQueue'' env EventQueue $ QCEvent $ EventLoad $ LoadData verts dyns
 -- | sends the list of textures to the event queue
 sendTextures ∷ (MonadLog μ, MonadFail μ) ⇒ [(String,Tex)] → μ ()
 sendTextures tm = do
   (Log _   env _   _   _) ← askLog
   liftIO $ writeQueue'' env EventQueue $ QCEvent $ EventTextures $ map (tfp ⊚ snd) tm
+-- | sends a syscommand over the event queue
+sendTest ∷ (MonadLog μ, MonadFail μ) ⇒ μ ()
+sendTest = do
+  (Log _   env _   _   _) ← askLog
+  liftIO $ writeQueue'' env EventQueue $ QCEvent $ EventTest
 -- | reads a tvar
 readTVar ∷ (MonadLog μ, MonadFail μ) ⇒ TVarName → μ (Maybe TVarValue)
 readTVar tvar = do
   (Log _   env _   _   _) ← askLog
   liftIO $ readTVar'' env tvar
+-- | writes a tvar
+writeTVar ∷ (MonadLog μ, MonadFail μ) ⇒ TVarName → TVarValue → μ ()
+writeTVar tvar val = do
+  (Log _   env _   _   _) ← askLog
+  liftIO $ writeTVar'' env tvar val
+-- | modifies a tvar
+modifyTVar ∷ (MonadLog μ, MonadFail μ) ⇒ TVarName → TVarValue → μ ()
+modifyTVar tvar val = do
+  (Log _   env _   _   _) ← askLog
+  liftIO $ modifyTVar'' env tvar val
+  
 -- | reads the font size tvar
 readFontSize ∷ (MonadLog μ, MonadFail μ) ⇒ μ Int
 readFontSize = do
