@@ -63,6 +63,9 @@ cradle:
     - path: "src/Prog/Input.hs"
       component: "paracletus:exe:paracletus"
 
+    - path: "src/Prog/Mouse.hs"
+      component: "paracletus:exe:paracletus"
+
     - path: "src/Prog/Util.hs"
       component: "paracletus:exe:paracletus"
 

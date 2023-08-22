@@ -15,11 +15,13 @@ import Luau.Data ( InputJson(..), KeySettings(..), ShellCmd(..) )
 import Prog.Data
     ( Env(..), QueueName(..)
     , ChanName(..), QueueCmd(..) )
+import Prog.Mouse ( processMouse, processMouseButton )
 import Prog.Util ( tryReadInputQueue )
 import Sign.Data
     ( Event(..), LogLevel(..), EventResult(..), LoadCmd(..)
     , SysAction(..), TState(..), InpCmd(..), InputEvent(..)
-    , SettingsChange(..), InputState(..), InputStateChange(..) )
+    , SettingsChange(..), InputState(..), MouseState(..)
+    , InputStateChange(..) )
 import Sign.Var ( atomically, readTVar, writeTVar, modifyTVar' )
 import Sign.Queue
     ( readChan, tryReadChan, tryReadQueue, writeQueue )
@@ -41,9 +43,12 @@ runInputLoop env win TStop  is = do
   case tsNew of
     Nothing  → runInputLoop env win TStop is
     Just ts0 → runInputLoop env win ts0   is
-runInputLoop env win TStart is = do
+runInputLoop env win TStart s0 = do
   start ← getCurrentTime
-  newstate ← processInputQueue env is
+  -- processes keys and the like
+  s1 ← processInputQueue env s0
+  -- processes mouse position every tick
+  s2 ← processMouse env win s1
   end ← getCurrentTime
   let diff  = diffUTCTime end start
       usecs = floor (toRational diff * 1000000) ∷ Int
@@ -53,8 +58,8 @@ runInputLoop env win TStart is = do
     else return ()
   tsNew ← readChan' env InputChan
   case tsNew of
-    Nothing  → runInputLoop env win TStart newstate
-    Just ts0 → runInputLoop env win ts0    newstate
+    Nothing  → runInputLoop env win TStart s2
+    Just ts0 → runInputLoop env win ts0    s2
 runInputLoop _ _ _ _ = return ()
 
 processInputQueue ∷ Env → InputState → IO (InputState)
@@ -71,9 +76,13 @@ processInputQueue env is = do
           return is
     Nothing → return is
 
+-- | processes input commands, which can be mouse clicks, keys, or state changes
 processInput ∷ Env → InputState → InpCmd → IO EventResult
 processInput env is (InpEvent (InputKey win key k ks mk)) = do
   processKey env key ks mk is
+  return EventResultSuccess
+processInput env is (InpEvent (InputMouseButton win mb mbs mk)) = do
+  processMouseButton env win mb mbs mk
   return EventResultSuccess
 processInput env is (InpState (ISCRegisterKeys path))     = do
   log' env (LogDebug 1) "registering keys..."
@@ -120,7 +129,13 @@ createKeyMap (KeySettings kEscape kTest kShell) = km
         km2        = Map.insert KFShell  (GLFW.getGLFWKeys kShell)  km1
 
 initInputState ∷ InputState
-initInputState = InputState { keyMap = KeyMap Map.empty }
+initInputState = InputState { keyMap  = KeyMap Map.empty
+                            , mouseSt = initMouseState }
+initMouseState ∷ MouseState
+initMouseState = MouseState { mouse1   = Nothing
+                            , mouse2   = Nothing
+                            , mouse3   = Nothing
+                            , mousePos = (0,0) }
 
 -- | returns the first key function with this key assigned
 lookupKey ∷ KeyMap → GLFW.Key → KeyFunc

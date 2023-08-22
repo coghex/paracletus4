@@ -78,7 +78,14 @@ data InputEvent
 data InputStateChange = ISCRegisterKeys String | ISCNULL deriving (Show, Eq)
 
 -- | input state is simply the state of the input thread
-data InputState = InputState { keyMap ∷ KeyMap } deriving (Show, Eq)
+data InputState = InputState { keyMap  ∷ KeyMap
+                             , mouseSt ∷ MouseState } deriving (Show, Eq)
+
+-- | the mouse state, updated every tick of the input thread
+data MouseState = MouseState { mouse1   ∷ Maybe (Double,Double)
+                             , mouse2   ∷ Maybe (Double,Double)
+                             , mouse3   ∷ Maybe (Double,Double)
+                             , mousePos ∷ (Double,Double) } deriving (Show, Eq)
 
 -- | commands for functionality at the lowest level
 data SysAction = SysRecreate | SysReload
