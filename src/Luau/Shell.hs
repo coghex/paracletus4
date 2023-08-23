@@ -5,12 +5,16 @@ import UPrelude
 import Control.Monad.IO.Class ( liftIO )
 import Data.List.Split ( splitOn )
 import Data ( Shell(..), ID(..) )
+import Prog.Data ( Env(..) )
 import Load.Data ( Tile(..), TilePos(..), TileTex(..), DrawState(..), DSStatus(..) )
 import Luau.Data ( ShellCmd(..) )
-import Sign.Log (LogT(..), MonadLog(..), log', sendCapture, sendTimerState)
+import Luau.ShCmd ( loadShCmds )
+import Sign.Log (LogT(..), MonadLog(..), log', sendCapture, sendTimerState, askLog, Log(..))
 import Sign.Data (LoadResult(..), Capture(..), LogLevel(..), TState(..), TimerName(..))
 import Vulk.Font ( indexTTFData, TTFData(..), GlyphMetrics(..), indexTTF )
 import qualified Vulk.GLFW as GLFW
+import qualified HsLua as Lua
+import qualified Data.ByteString.Char8 as BL
 
 -- | processing of shell commands
 processShellCommand ∷ (MonadLog μ,MonadFail μ) ⇒ DrawState → ShellCmd → LogT μ LoadResult
@@ -28,10 +32,19 @@ processShellCommand ds (ShKey key mk)
     return $ LoadResultDrawState
       $ ds { dsShell  = delShell (dsShell ds)
            , dsStatus = DSSReload }
+  else if key ≡ GLFW.Key'Enter then do
+    (Log _   env _   _   _) ← askLog
+    newSh ← liftIO $ evalShell env $ dsShell ds
+    return $ LoadResultDrawState
+      $ ds { dsShell  = newSh }
   else do
     str ← liftIO $ GLFW.calcInpKey key mk
     return $ LoadResultDrawState
       $ ds { dsShell  = stringShell (dsShell ds) str
+           , dsStatus = DSSReload }
+processShellCommand ds (ShEcho str)
+  = return $ LoadResultDrawState
+      $ ds { dsShell  = (dsShell ds) { shRet = (shRet (dsShell ds)) ⧺ str }
            , dsStatus = DSSReload }
 processShellCommand _  cmd            = do
   return $ LoadResultError $ "unknown shell command: " ⧺ show cmd
@@ -55,6 +68,59 @@ delShell sh = sh { shInpStr = newStr
   where newStr = initS (take (shCursor sh) (shInpStr sh)) ⧺ (drop (shCursor sh) (shInpStr sh))
         initS ""  = ""
         initS str = init str
+
+-- evaluates lua commands in IO
+evalShell ∷ Env → Shell → IO Shell
+evalShell env shell = do
+  let ls = envLuaSt env
+  if shLibs shell then
+    return shell
+  else do
+    loadShCmds env
+    return shell
+  (ret,outbuff) ← execShell ls (shInpStr shell)
+  let retstring = if length (shOutStr shell) ≡ 0
+        then case outbuff of
+          "nil" → shOutStr shell ⧺ shPrompt shell ⧺ shInpStr shell
+                  ⧺ "\n" ⧺ show ret ⧺ "\n"
+          _     → shOutStr shell ⧺ shPrompt shell ⧺ shInpStr shell
+                  ⧺ "\n" ⧺ show ret ⧺ " > " ⧺ outbuff ⧺ "\n"
+        else case outbuff of
+          "nil" → case shRet shell of
+                    "" → init (shOutStr shell) ⧺ "\n"
+                         ⧺ shPrompt shell ⧺ shInpStr shell ⧺ "\n" ⧺ show ret ⧺ "\n"
+                    _  → init (shOutStr shell) ⧺ "> " ⧺ shRet shell
+                         ⧺ "\n" ⧺ shPrompt shell ⧺ shInpStr shell
+                         ⧺ "\n" ⧺ show ret ⧺ "\n"
+          _     → case shRet shell of
+                    "" → init (shOutStr shell)
+                         ⧺ "\n" ⧺ shPrompt shell ⧺ shInpStr shell
+                         ⧺ "\n" ⧺ show ret ⧺ " > " ⧺ outbuff ⧺ "\n"
+                    _  → init (shOutStr shell) ⧺ "> " ⧺ shRet shell
+                         ⧺ "\n" ⧺ shPrompt shell ⧺ shInpStr shell ⧺ "\n"
+                         ⧺ show ret ⧺ " > " ⧺ outbuff ⧺ "\n"
+      shell' = shell { shInpStr = ""
+                     , shOutStr = retstring
+                     , shTabbed = Nothing
+                     , shRet    = ""
+                     , shLoaded = True
+                     , shHistI  = -1
+                     , shHist   = [shInpStr shell] ⧺ shHist shell
+                     , shCursSt = True
+                     , shCursor = 0 }
+  return shell'
+execShell ∷ Lua.State → String → IO (Lua.Status,String)
+execShell ls ""  = return (Lua.OK,"")
+execShell ls str = do
+  let str' = case last str of
+               ')' → str
+               _   → str ⧺ "()"
+  luaerror ← Lua.runWith ls $ Lua.loadstring $ BL.pack str'
+  _   ← Lua.runWith ls $ Lua.pcall 0 1 Nothing
+  ret ← Lua.runWith ls $ (Lua.tostring' $ Lua.nthBottom (-1)
+    ∷ Lua.LuaE Lua.Exception BL.ByteString)
+  Lua.runWith ls $ Lua.pop $ fromEnum $ Lua.nthBottom (-1)
+  return $ (luaerror,(BL.unpack ret))
 
 -- | a combination of every tile needed for the shell
 shTiles ∷ Int → [TTFData] → Shell → [Tile]
@@ -94,7 +160,7 @@ txtTiles fontsize ttfdata pos sh buffSize = case shLoaded sh of
 -- | returns the x position of the shell's cursor
 findCursPos ∷ [TTFData] → String → Double
 findCursPos _       []        = 1.8
-findCursPos ttfdata (' ':str) = 0.5 + findCursPos ttfdata str
+findCursPos ttfdata (' ':str) = 0.1 + findCursPos ttfdata str
 findCursPos ttfdata (ch:str)  = case indexTTFData ttfdata ch of
   Nothing → findCursPos ttfdata str
   Just (TTFData _ _ (GlyphMetrics _ _ _ _ chA)) → wid + findCursPos ttfdata str
@@ -141,7 +207,7 @@ boxTiles ∷ Int → (Double,Double) → Shell → [Tile]
 boxTiles fontsize pos sh  = tiles
     where pos        = (-10,5)
           width      = 8
-          height     = 2
+          height     = 6
           width'     = 2.0 * fromIntegral (width+1)
           height'    = 2.0 * fromIntegral (height+1)
           postl      = pos

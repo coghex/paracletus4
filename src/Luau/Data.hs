@@ -36,4 +36,5 @@ instance ToJSON   KeySettings where
 -- | possible commands to send the shell
 data ShellCmd = ShToggle
               | ShKey GLFW.Key GLFW.ModifierKeys
+              | ShEcho String | ShHistory | ShClear | ShExit
               | ShNULL deriving (Show, Eq)

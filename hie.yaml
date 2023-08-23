@@ -42,6 +42,9 @@ cradle:
     - path: "src/Luau/Data.hs"
       component: "paracletus:exe:paracletus"
 
+    - path: "src/Luau/ShCmd.hs"
+      component: "paracletus:exe:paracletus"
+
     - path: "src/Luau/Shell.hs"
       component: "paracletus:exe:paracletus"
 

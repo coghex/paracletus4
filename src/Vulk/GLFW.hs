@@ -132,7 +132,8 @@ applyKeyLayout _         _     = "NULL"
 
 -- | convert a known key into possible a string
 getKeyStr ∷ Key → IO (Maybe String)
-getKeyStr k = getKeyName k 0
+getKeyStr Key'Space = return $ Just " "
+getKeyStr k         = getKeyName k 0
 
 -- | takes the input key and applys shift if neccesary
 calcInpKey ∷ Key → ModifierKeys → IO String

@@ -248,4 +248,4 @@ initDrawState ∷ DrawState
 initDrawState = DrawState DSSNULL (TextureMap []) Map.empty [] initShell
 -- | creates a shell with empty values
 initShell ∷ Shell
-initShell = Shell "$> " Nothing 1 True "" "" "" "" False (-1) []
+initShell = Shell "$> " Nothing 1 True "" "" "" "" False False (-1) []

@@ -119,7 +119,10 @@ processKey env key ks mk is = do
         log' env (LogDebug 1) "sending quit command"
         writeQueue'' env EventQueue $ QCEvent $ EventSys SysExit
       KFTest → do
-        writeQueue'' env LoadQueue $ QCLoadCmd LoadTest
+        if keyCap is ≡ CaptureShell then
+          writeQueue'' env LoadQueue $ QCLoadCmd $ LoadShell $ ShKey key mk
+        else
+          writeQueue'' env LoadQueue $ QCLoadCmd LoadTest
       KFShell → do
         writeQueue'' env LoadQueue $ QCLoadCmd $ LoadShell ShToggle
       keyFunc → if keyCap is ≡ CaptureShell then

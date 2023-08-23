@@ -27,6 +27,7 @@ executable paracletus
                    Load.Util
                    Luau.Command
                    Luau.Data
+                   Luau.ShCmd
                    Luau.Shell
                    Luau.Util
                    Prog.Buff
