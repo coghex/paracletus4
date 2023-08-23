@@ -26,9 +26,10 @@ import Prog.Util
       logError,
       occupyThreadAndFork )
 import Sign.Except ( ExType(ExVulk) )
+import Sign.Data ( LoadCmd(..) )
 import Sign.Var ( atomically, writeTVar, TVar )
 import Sign.Queue ( writeQueue )
-import Sign.Util ( findQueue', writeQueue' )
+import Sign.Util ( findQueue', writeQueue'' )
 import Vulk.Data
     ( VulkResult(GLFWError) )
 import Vulk.Callback
@@ -70,8 +71,8 @@ initGLFWWindow w h n windowSizeChanged = do
           $ Just $ scrollCallback      eventQ
         liftIO $ GLFW.setWindowSizeCallback  window
           $ Just (\_ _ _ → do
-            atomically $ writeTVar windowSizeChanged True )
-            --atomically $ writeQueue (envLoadQ env) LoadCmdVerts )
+            atomically $ writeTVar windowSizeChanged True
+            liftIO $ writeQueue'' env LoadQueue (QCLoadCmd LoadRecreate) )
         return window
 
 -- | loadLoop is the outer loop

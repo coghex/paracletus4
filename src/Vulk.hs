@@ -102,6 +102,7 @@ runVulk = do
     -- this is the only glfw window handle that
     -- should be used for write access
     modify $ \s → s { stWindow = Just window }
+    liftIO $ GLFW.setWindowSize window 1280 720
     -- vulkan specifics
     vulkanInstance ← createGLFWVulkanInstance "paracletus-instance"
     vulkanSurface ← createSurface vulkanInstance window
