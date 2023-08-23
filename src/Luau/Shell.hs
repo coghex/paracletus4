@@ -3,6 +3,7 @@ module Luau.Shell where
 import Prelude()
 import UPrelude
 import Control.Monad.IO.Class ( liftIO )
+import Data.List (isPrefixOf)
 import Data.List.Split ( splitOn )
 import Data ( Shell(..), ShellCard(..), ID(..) )
 import Prog.Data ( Env(..) )
@@ -57,6 +58,10 @@ processShellCommand ds (ShKey key mk)
        newSh ← liftIO $ evalShell env $ dsShell ds
        return $ LoadResultDrawState
          $ ds { dsShell  = newSh }
+  | key ≡ GLFW.Key'Tab
+  = return $ LoadResultDrawState
+      $ ds { dsShell  = tabShell (dsShell ds)
+           , dsStatus = DSSReload }
   | key ≡ GLFW.Key'Up
   = return $ LoadResultDrawState
       $ ds { dsShell  = upShell (dsShell ds)
@@ -82,17 +87,65 @@ processShellCommand ds (ShEcho str)
   = return $ LoadResultDrawState
       $ ds { dsShell  = (dsShell ds) { shRet = (shRet (dsShell ds)) ⧺ str }
            , dsStatus = DSSReload }
+processShellCommand ds ShHistory
+  = return $ LoadResultDrawState
+      $ ds { dsShell  = (dsShell ds) { shRet = filterEscapes $ show $ tail
+                                             $ shHist (dsShell ds) }
+           , dsStatus = DSSReload }
+processShellCommand ds ShClear
+  = return $ LoadResultDrawState
+      $ ds { dsShell  = sh'
+           , dsStatus = DSSReload }
+        where sh' = sh { shInpStr = ""
+                       , shOutStr = ""
+                       , shRet    = ""
+                       , shCursor = 0 }
+              sh  = dsShell ds
 processShellCommand _  cmd            = do
   return $ LoadResultError $ "unknown shell command: " ⧺ show cmd
 
--- sends directional key to shell
+-- | strips bytestring escapes for printing purposes
+filterEscapes ∷ String → String
+filterEscapes ""       = ""
+filterEscapes (ch:str) = ch' ⧺ filterEscapes str
+  where ch' = case (ch) of
+                '\\' → []
+                ch0  → [ch0]
+
+-- | tabs through shell commands and history
+tabShell ∷ Shell → Shell
+tabShell sh
+  | shTabbed sh ≡ Nothing =
+      sh { shCache  = shInpStr sh
+         , shInpStr = newStr0
+         , shTabbed = Just 0
+         , shCursor = length newStr0 }
+  | otherwise             =
+      sh { shTabbed = Just incSh
+         , shInpStr = newStr1
+         , shCursor = length newStr1 }
+    where incSh   = incShTabbed $ shTabbed sh
+          newStr0 = tabCommand 0     (shInpStr sh) cmds
+          newStr1 = tabCommand incSh (shCache sh) cmds
+          cmds    = ["newWindow", "newText", "newMenu", "newMenuBit", "newLink", "newWorld", "switchWindow", "switchScreen", "setBackground", "luaModule", "newDynObj", "resizeWindow", "toggleFPS", "echo", "history", "clear", "recreate", "reload"] ⧺ shHist sh
+incShTabbed ∷ Maybe Int → Int
+incShTabbed Nothing  = 0
+incShTabbed (Just n) = (n + 1)
+tabCommand ∷ Int → String → [String] → String
+tabCommand n inpStr cmds
+  | matchedStrings ≡ [] = inpStr
+  | otherwise           = matchedStrings !! (n `mod` (length matchedStrings))
+  where matchedStrings = filter (isPrefixOf inpStr) cmds
+
+
+-- | sends directional key to shell
 directionShell ∷ ShellCard → Shell → Shell
 directionShell ShellUp    sh = upShell   sh
 directionShell ShellDown  sh = downShell sh
 directionShell ShellLeft  sh = cursorShell (-1) sh
 directionShell ShellRight sh = cursorShell 1    sh
 
--- cycles through shell history
+-- | cycles through shell history
 upShell ∷ Shell → Shell
 upShell sh
   | shHist sh ≡ [] = sh
@@ -109,7 +162,7 @@ downShell sh
                         , shCursor = length shinpstr }
   | otherwise      = sh { shInpStr = "" }
   where shinpstr = shHist sh !! (shHistI sh `mod` length (shHist sh))
--- move shell cursor
+-- | move shell cursor
 cursorShell ∷ Int → Shell → Shell
 cursorShell n sh = sh { shCursor = n' }
   where n' = max 0 $ min (length (shInpStr sh)) $ (shCursor sh) + n
