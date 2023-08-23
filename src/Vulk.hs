@@ -33,6 +33,7 @@ import Sign.Except ( testEx, ExType(ExVulk) )
 import Sign.Var
     ( atomically, modifyTVar', newTVar, readTVar, writeTVar )
 import Sign.Util ( readTVar', writeTVar', writeChan', modifyTVar )
+import Time ( timeThread )
 import Vulk.Buff ( createIndexBuffer, createVertexBuffer )
 import Vulk.Command ( createCommandPool )
 import Vulk.Calc ( calcVertices )
@@ -136,9 +137,11 @@ runVulk = do
       env ← ask
       writeChan' env InputChan TStart
       writeChan' env LoadChan TStart
+      writeChan' env TimeChan TStart
       _ ← liftIO $ forkIO $ luauThread env
       _ ← liftIO $ forkIO $ inputThread env window
       _ ← liftIO $ forkIO $ loadThread env
+      _ ← liftIO $ forkIO $ timeThread env
       -- window size change handling
       let beforeSwapchainCreation ∷ Prog ε σ ()
           beforeSwapchainCreation =

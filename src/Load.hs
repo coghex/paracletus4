@@ -22,6 +22,7 @@ import Prog.Data
 import Prog.Buff ( generateDynData )
 import Sign.Data
 import Sign.Log
+import Time ( processTimer )
 import Vulk.Calc ( calcVertices )
 import Vulk.Data ( Verts(Verts) )
 import Util ( newID )
@@ -41,11 +42,11 @@ loadThread env = do
 runLoadLoop ∷ (MonadLog μ,MonadFail μ) ⇒ DrawState → TState → LogT μ ()
 runLoadLoop ds TStop = do
   -- loop starts almost immediately
-  tsNew ← readTimerBlocked
+  tsNew ← readLoadTimerBlocked
   runLoadLoop ds tsNew
 runLoadLoop ds TStart = do
   start ← liftIO getCurrentTime
-  timerState ← readTimer
+  timerState ← readLoadTimer
   tsNew ← case timerState of
     Nothing → return TStart
     Just x  → return x
@@ -65,7 +66,7 @@ runLoadLoop _ TNULL  = return ()
 -- | command queue processed once per loop
 processCommands ∷ (MonadLog μ,MonadFail μ) ⇒ DrawState → LogT μ DrawState
 processCommands ds = do
-  mcmd ← readCommand
+  mcmd ← readLoadCommand
   case mcmd of
     Just cmd → do
       ret ← processCommand ds cmd
@@ -151,6 +152,7 @@ processCommand ds cmd = case cmd of
         return LoadResultSuccess
   LoadNew lc → newChunk ds lc
   LoadShell shcmd → processShellCommand ds shcmd
+  LoadTimer timer → processTimer ds timer
   LoadReload → do
     return $ LoadResultDrawState ds { dsStatus = DSSReload }
   LoadRecreate → do
@@ -246,4 +248,4 @@ initDrawState ∷ DrawState
 initDrawState = DrawState DSSNULL (TextureMap []) Map.empty [] initShell
 -- | creates a shell with empty values
 initShell ∷ Shell
-initShell = Shell "$> " Nothing 1 "" "" "" "" False (-1) []
+initShell = Shell "$> " Nothing 1 True "" "" "" "" False (-1) []

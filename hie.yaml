@@ -21,6 +21,9 @@ cradle:
     - path: "src/Sign.hs"
       component: "paracletus:exe:paracletus"
 
+    - path: "src/Time.hs"
+      component: "paracletus:exe:paracletus"
+
     - path: "src/Vulk.hs"
       component: "paracletus:exe:paracletus"
 
@@ -88,6 +91,9 @@ cradle:
       component: "paracletus:exe:paracletus"
 
     - path: "src/Sign/Var.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Time/Data.hs"
       component: "paracletus:exe:paracletus"
 
     - path: "src/Vulk/Atlas.hs"

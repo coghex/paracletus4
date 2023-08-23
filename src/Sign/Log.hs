@@ -15,12 +15,13 @@ import Load.Data ( DynData(..), TextureMap(..), Tex(..) )
 import Prog.Data ( Env(..), ChanName(..), QueueName(..), QueueCmd(..)
                  , TVarName(..), TVarValue(..))
 import Sign.Data ( LogLevel(..), Event(..), TState(..), LoadCmd(..), InpCmd(..)
-                 , SysAction(..), SettingsChange(..), Capture(..)
+                 , SysAction(..), SettingsChange(..), Capture(..), TimerName(..)
                  , InputStateChange(..) )
 import Sign.Var ( atomically )
 import Sign.Queue ( readChan, tryReadChan, writeChan )
 import Sign.Util ( readChan', writeQueue'', tryReadQueue'', readTVar''
                  , writeTVar'', modifyTVar'' )
+import Time.Data ( TimeCmd(..) )
 import Vulk.Font (TTFData(..))
 import Vulk.Data (Verts(..))
 import qualified Vulk.GLFW as GLFW
@@ -92,14 +93,14 @@ lvlbelow _            LogInfo      = False
 lvlbelow _            _            = True
 
 -- | returns nothing if load channel is empty
-readTimer ∷ (MonadLog μ, MonadFail μ) ⇒ μ (Maybe TState)
-readTimer = do
+readLoadTimer ∷ (MonadLog μ, MonadFail μ) ⇒ μ (Maybe TState)
+readLoadTimer = do
   (Log _   env _   _   _) ← askLog
   liftIO $ readChan' env LoadChan
 
 -- | hangs execution until it reads something
-readTimerBlocked ∷ (MonadLog μ, MonadFail μ) ⇒ μ TState
-readTimerBlocked = do
+readLoadTimerBlocked ∷ (MonadLog μ, MonadFail μ) ⇒ μ TState
+readLoadTimerBlocked = do
   (Log _   env _   _   _) ← askLog
   res ← liftIO $ readChan' env LoadChan
   case res of
@@ -108,9 +109,26 @@ readTimerBlocked = do
       return TStop
     Just res → return res
 
+-- | returns nothing if time channel is empty
+readTimeTimer ∷ (MonadLog μ, MonadFail μ) ⇒ μ (Maybe TState)
+readTimeTimer = do
+  (Log _   env _   _   _) ← askLog
+  liftIO $ readChan' env TimeChan
+
+-- | hangs execution until it reads something
+readTimeTimerBlocked ∷ (MonadLog μ, MonadFail μ) ⇒ μ TState
+readTimeTimerBlocked = do
+  (Log _   env _   _   _) ← askLog
+  res ← liftIO $ readChan' env TimeChan
+  case res of
+    Nothing  → do
+      liftIO $ print "ERROR: NO TIMER CHAN"
+      return TStop
+    Just res → return res
+
 -- | returns nothing if load queue is empty
-readCommand ∷ (MonadLog μ, MonadFail μ) ⇒ μ (Maybe LoadCmd)
-readCommand = do
+readLoadCommand ∷ (MonadLog μ, MonadFail μ) ⇒ μ (Maybe LoadCmd)
+readLoadCommand = do
   (Log _   env _   _   _) ← askLog
   lc ← liftIO $ tryReadQueue'' env LoadQueue
   case lc of
@@ -119,6 +137,30 @@ readCommand = do
     Just badloadcmd      → do
       log' LogError $ "bad load command " ⧺ show badloadcmd
       return Nothing
+
+-- | returns nothing if load queue is empty
+readTimeCommand ∷ (MonadLog μ, MonadFail μ) ⇒ μ (Maybe TimeCmd)
+readTimeCommand = do
+  (Log _   env _   _   _) ← askLog
+  lc ← liftIO $ tryReadQueue'' env TimeQueue
+  case lc of
+    Nothing              → return Nothing
+    Just (QCTimeCmd tc0) → return $ Just tc0
+    Just badtimecmd      → do
+      log' LogError $ "bad time command " ⧺ show badtimecmd
+      return Nothing
+
+-- | sends a timer trigger to the load thread
+sendTimer ∷ (MonadLog μ, MonadFail μ) ⇒ TimerName → μ ()
+sendTimer timer = do
+  (Log _   env _   _   _) ← askLog
+  liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadTimer timer
+-- | sends a timer command to the timer thread
+sendTimerState ∷ (MonadLog μ, MonadFail μ)
+  ⇒ TimerName → TState → μ ()
+sendTimerState timer st = do
+  (Log _   env _   _   _) ← askLog
+  liftIO $ writeQueue'' env TimeQueue $ QCTimeCmd $ TCState timer st
 
 -- | writes to the ID chan
 writeIDChan ∷ (MonadLog μ, MonadFail μ) ⇒ ID → μ ()

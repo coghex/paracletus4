@@ -40,7 +40,7 @@ data Event = EventError !GLFW.Error !String -- GLFW specific
            deriving (Show, Eq)
 
 -- | possible commands load thread can handle
-data LoadCmd = LoadNew LoadChunk | LoadShell ShellCmd
+data LoadCmd = LoadNew LoadChunk | LoadShell ShellCmd | LoadTimer TimerName
              | LoadState LoadStateChange | LoadReload | LoadRecreate | LoadTest
              | LoadCmdNULL deriving (Show, Eq)
 data LoadChunk = LCWindow String
@@ -56,6 +56,9 @@ data InpCmd  = InpEvent InputEvent | InpState InputStateChange
 data LoadStateChange = LSCRegisterTileMap String | LSCRegisterTextureMap String
                      | LSCSelectWin String
                      | LSCNULL deriving (Show, Eq)
+
+-- | possible names of timers
+data TimerName = ShellCursorTimer | NULLTimer deriving (Show, Eq)
 
 -- | log levels are for monadic logger, but stdio
 data LogLevel = LogDebug Int

@@ -71,6 +71,7 @@ type Row α = [α]
 data Shell = Shell { shPrompt ∷ String
                    , shTabbed ∷ Maybe Int
                    , shCursor ∷ Int
+                   , shCursSt ∷ Bool
                    , shInpStr ∷ String
                    , shCache  ∷ String
                    , shOutStr ∷ String

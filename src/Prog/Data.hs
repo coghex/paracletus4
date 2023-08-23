@@ -11,6 +11,7 @@ import Sign.Data ( TState, Event(..), LoadCmd(..), InpCmd(..) )
 import Sign.Except ( ProgExcept )
 import Sign.Queue ( Queue, TChan )
 import Sign.Var ( TVar )
+import Time.Data ( TimeCmd )
 import Data ( FPS, ID )
 import Data.Time.Clock.System ( SystemTime )
 import Data.Map (Map)
@@ -37,14 +38,14 @@ data Env = Env { envQueues ∷ Queues
 
 -- | dynamic collection of queues
 data Queues    = Queues { qm ∷ Map QueueName (Queue QueueCmd) }
-data QueueCmd  = QCEvent Event | QCLoadCmd LoadCmd
+data QueueCmd  = QCEvent Event | QCLoadCmd LoadCmd | QCTimeCmd TimeCmd
                | QCInpCmd InpCmd deriving (Show, Eq)
 -- | some queues are required, others can be added
-data QueueName = EventQueue | LoadQueue
+data QueueName = EventQueue | LoadQueue | TimeQueue
                | InputQueue | CustomQueue Int deriving (Show, Eq, Ord)
 -- | dynamic collection of chans
 data Chans     = Chans { cm ∷ Map ChanName (TChan TState) }
-data ChanName  = LuaChan | InputChan | LoadChan | IDChan
+data ChanName  = LuaChan | InputChan | LoadChan | TimeChan | IDChan
                | CustomChan Int deriving (Show, Eq, Ord)
 -- | dynamic collection of tvars
 data TVars     = TVars { tm ∷ Map TVarName (TVar (Maybe TVarValue)) }

@@ -20,6 +20,7 @@ executable paracletus
                    Luau
                    Prog
                    Sign
+                   Time
                    Vulk
                    Util
                    Load.Data
@@ -43,6 +44,7 @@ executable paracletus
                    Sign.Thread
                    Sign.Util
                    Sign.Var
+                   Time.Data
                    Vulk.Atlas
                    Vulk.Buff
                    Vulk.Callback

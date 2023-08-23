@@ -34,4 +34,6 @@ instance ToJSON   KeySettings where
         pairs ("keyEscape" .= keyEscape <> "keyTest" .= keyTest <> "keyShell" .= keyShell)
 
 -- | possible commands to send the shell
-data ShellCmd = ShToggle | ShKey GLFW.Key GLFW.ModifierKeys | ShNULL deriving (Show, Eq)
+data ShellCmd = ShToggle
+              | ShKey GLFW.Key GLFW.ModifierKeys
+              | ShNULL deriving (Show, Eq)

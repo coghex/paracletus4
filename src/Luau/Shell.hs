@@ -7,9 +7,9 @@ import Data.List.Split ( splitOn )
 import Data ( Shell(..), ID(..) )
 import Load.Data ( Tile(..), TilePos(..), TileTex(..), DrawState(..), DSStatus(..) )
 import Luau.Data ( ShellCmd(..) )
-import Sign.Log (LogT(..), MonadLog(..), log', sendCapture)
-import Sign.Data (LoadResult(..), Capture(..))
-import Vulk.Font ( indexTTFData, TTFData(..), GlyphMetrics(..) )
+import Sign.Log (LogT(..), MonadLog(..), log', sendCapture, sendTimerState)
+import Sign.Data (LoadResult(..), Capture(..), LogLevel(..), TState(..), TimerName(..))
+import Vulk.Font ( indexTTFData, TTFData(..), GlyphMetrics(..), indexTTF )
 import qualified Vulk.GLFW as GLFW
 
 -- | processing of shell commands
@@ -17,15 +17,22 @@ processShellCommand ∷ (MonadLog μ,MonadFail μ) ⇒ DrawState → ShellCmd �
 processShellCommand ds ShToggle       = do
   -- sets the capture in the input thread
   let cap = if shLoaded (dsShell ds) then CaptureNULL else CaptureShell
+  let tst = if shLoaded (dsShell ds) then TPause else TStart
   sendCapture cap
+  sendTimerState ShellCursorTimer tst
   return $ LoadResultDrawState
     $ ds { dsShell  = toggleShell (dsShell ds)
          , dsStatus = DSSReload }
-processShellCommand ds (ShKey key mk) = do
-  str ← liftIO $ GLFW.calcInpKey key mk
-  return $ LoadResultDrawState
-    $ ds { dsShell  = stringShell (dsShell ds) str
-         , dsStatus = DSSReload }
+processShellCommand ds (ShKey key mk)
+  = if key ≡ GLFW.Key'Backspace then
+    return $ LoadResultDrawState
+      $ ds { dsShell  = delShell (dsShell ds)
+           , dsStatus = DSSReload }
+  else do
+    str ← liftIO $ GLFW.calcInpKey key mk
+    return $ LoadResultDrawState
+      $ ds { dsShell  = stringShell (dsShell ds) str
+           , dsStatus = DSSReload }
 processShellCommand _  cmd            = do
   return $ LoadResultError $ "unknown shell command: " ⧺ show cmd
 
@@ -37,16 +44,41 @@ toggleShell shell = shell { shLoaded = not (shLoaded shell) }
 stringShell ∷ Shell → String → Shell
 stringShell sh str = sh { shTabbed = Nothing
                         , shInpStr = newStr
+                        , shCursSt = True
                         , shCursor = (shCursor sh) + (length str) }
   where newStr = (take (shCursor sh) (shInpStr sh)) ⧺ str ⧺ (drop (shCursor sh) (shInpStr sh))
+
+-- | deletes a character from the shell
+delShell ∷ Shell → Shell
+delShell sh = sh { shInpStr = newStr
+                 , shCursor = max 0 ((shCursor sh) - 1) }
+  where newStr = initS (take (shCursor sh) (shInpStr sh)) ⧺ (drop (shCursor sh) (shInpStr sh))
+        initS ""  = ""
+        initS str = init str
 
 -- | a combination of every tile needed for the shell
 shTiles ∷ Int → [TTFData] → Shell → [Tile]
 shTiles fontsize ttfdata sh = tiles
-  where tiles    = txttiles ⧺ boxtiles
-        pos      = (-10,5)
-        boxtiles = boxTiles fontsize pos sh
-        txttiles = txtTiles fontsize ttfdata pos sh 256
+  where tiles     = curstiles ⧺ txttiles ⧺ boxtiles
+        pos       = (-10,5)
+        boxtiles  = boxTiles fontsize pos sh
+        txttiles  = txtTiles fontsize ttfdata pos sh 256
+        curstiles = cursTiles fontsize ttfdata pos sh
+
+-- | the cursor tiles
+cursTiles ∷ Int → [TTFData] → (Double,Double) → Shell → [Tile]
+cursTiles fontsize ttfdata pos sh = case shLoaded sh of
+  False → [Tile IDNULL (TilePos (0,0) (1,1)) (TileTex (0,0) (1,1) fontsize)]
+  True  → case indexTTFData ttfdata '|' of
+    Nothing → [Tile IDNULL (TilePos (0,0) (1,1)) (TileTex (0,0) (1,1) fontsize)]
+    Just (TTFData _ _ (GlyphMetrics chW chH _ _ _)) → if shCursSt sh then
+        [Tile IDNULL (TilePos pos' size)  (TileTex (0,0) (1,1) 93)]
+      else [Tile IDNULL (TilePos (0,0) (1,1)) (TileTex (0,0) (1,1) fontsize)]
+          where size  = (realToFrac chW, 2*realToFrac chH)
+                pos'  = ((fst pos) + xcurs, (snd pos) - ycurs - 0.1)
+                xcurs = findCursPos ttfdata $ take n $ shInpStr sh
+                ycurs = fromIntegral $ min 9 $ length $ splitOn "\n" $ shOutStr sh
+                n     = shCursor sh
 
 -- | every tile needed for the text, fills the rest with empty buffer
 txtTiles ∷ Int → [TTFData] → (Double,Double) → Shell → Int → [Tile]
@@ -58,6 +90,15 @@ txtTiles fontsize ttfdata pos sh buffSize = case shLoaded sh of
     where tiles  = genStringTiles fontsize ttfdata (fst pos') pos' string
           string = genShellStr sh
           pos'   = (fst pos + 1, snd pos - 1)
+
+-- | returns the x position of the shell's cursor
+findCursPos ∷ [TTFData] → String → Double
+findCursPos _       []        = 1.8
+findCursPos ttfdata (' ':str) = 0.5 + findCursPos ttfdata str
+findCursPos ttfdata (ch:str)  = case indexTTFData ttfdata ch of
+  Nothing → findCursPos ttfdata str
+  Just (TTFData _ _ (GlyphMetrics _ _ _ _ chA)) → wid + findCursPos ttfdata str
+    where wid = 2*chA
 
 -- | generates the tiles for a singe string
 genStringTiles ∷ Int → [TTFData] → Double → (Double,Double) → String → [Tile]

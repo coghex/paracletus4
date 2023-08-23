@@ -42,10 +42,13 @@ initEnv = do
   loadQ    ← newQueue
   -- input thread tracks the mouse and processes input
   inpQ     ← newQueue
+  -- time thread sends commands in regular intervals
+  timeQ    ← newQueue
   -- channels that contain semaphores for each thread
   luaCh    ← newTChan
   loadCh   ← newTChan
   inpCh    ← newTChan
+  timeCh   ← newTChan
   -- channel specifically for returning object IDs to lua
   idCh     ← newTChan
   -- vert TVar keeps verticies in a cache so when we only
@@ -59,8 +62,8 @@ initEnv = do
   fsTV     ← atomically $ newTVar Nothing
   -- we also need to keep track of the font hinting data
   fmTV     ← atomically $ newTVar Nothing
-  let env = Env { envQueues = Queues queues3
-                , envChans  = Chans chans3
+  let env = Env { envQueues = Queues queues4
+                , envChans  = Chans chans4
                 , envIDChan = idCh
                 , envTVars  = TVars tvars4
                 , envLuaSt  = luaSt }
@@ -68,10 +71,12 @@ initEnv = do
       queues1 = Map.insert EventQueue eventQ  queues0
       queues2 = Map.insert LoadQueue  loadQ   queues1
       queues3 = Map.insert InputQueue inpQ    queues2
+      queues4 = Map.insert TimeQueue  timeQ   queues3
       chans0  = Map.empty
       chans1  = Map.insert LuaChan    luaCh   chans0
       chans2  = Map.insert LoadChan   loadCh  chans1
       chans3  = Map.insert InputChan  inpCh   chans2
+      chans4  = Map.insert TimeChan   timeCh  chans3
       tvars0  = Map.empty
       tvars1  = Map.insert VertsTVar    vertsTV tvars0
       tvars2  = Map.insert DynsTVar     dynsTV  tvars1
