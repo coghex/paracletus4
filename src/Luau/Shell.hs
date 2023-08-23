@@ -57,7 +57,8 @@ processShellCommand ds (ShKey key mk)
   = do (Log _   env _   _   _) ← askLog
        newSh ← liftIO $ evalShell env $ dsShell ds
        return $ LoadResultDrawState
-         $ ds { dsShell  = newSh }
+         $ ds { dsShell  = newSh
+              , dsStatus = DSSReload }
   | key ≡ GLFW.Key'Tab
   = return $ LoadResultDrawState
       $ ds { dsShell  = tabShell (dsShell ds)

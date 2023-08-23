@@ -150,6 +150,11 @@ processCommand ds cmd = case cmd of
   LoadTest → do
         sendTest
         return LoadResultSuccess
+  LoadID → do
+    log' LogInfo "creating id..."
+    ID id0 ← liftIO newID
+    writeIDChan $ ID id0
+    return LoadResultSuccess
   LoadNew lc → newChunk ds lc
   LoadShell shcmd → processShellCommand ds shcmd
   LoadTimer timer → processTimer ds timer
@@ -191,7 +196,8 @@ newChunk _  lc                         = do
 
 -- | adds a new tile to a window
 newTile ∷ DrawState → String → Tile → DrawState
-newTile ds win tile = ds { dsWins = addTileToWin (dsWins ds) win tile }
+newTile ds win tile = ds { dsWins   = addTileToWin (dsWins ds) win tile
+                         , dsStatus = DSSRecreate }
 -- { dsWins = addTileToWin (dsWins ds) win tile }
 addTileToWin ∷ Map.Map String Window → String → Tile → Map.Map String Window
 addTileToWin wins win tile = case Map.lookup win wins of

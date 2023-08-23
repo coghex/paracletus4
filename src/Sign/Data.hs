@@ -42,6 +42,7 @@ data Event = EventError !GLFW.Error !String -- GLFW specific
 -- | possible commands load thread can handle
 data LoadCmd = LoadNew LoadChunk | LoadShell ShellCmd | LoadTimer TimerName
              | LoadState LoadStateChange | LoadReload | LoadRecreate | LoadTest
+             | LoadID
              | LoadCmdNULL deriving (Show, Eq)
 data LoadChunk = LCWindow String
                | LCText String Text
