@@ -81,6 +81,9 @@ data Shell = Shell { shPrompt ∷ String
                    , shHistI  ∷ Int
                    , shHist   ∷ [String] } deriving (Show, Eq)
 
+-- | cardinal directions of input the the shell
+data ShellCard = ShellUp | ShellDown | ShellLeft | ShellRight deriving (Show, Eq)
+
 -- abstract popup, independent of window
 data Popup = Popup { puPos  ∷ (Double,Double)
                    , puSize ∷ (Double,Double)

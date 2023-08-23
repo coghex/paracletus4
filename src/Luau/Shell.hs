@@ -4,7 +4,7 @@ import Prelude()
 import UPrelude
 import Control.Monad.IO.Class ( liftIO )
 import Data.List.Split ( splitOn )
-import Data ( Shell(..), ID(..) )
+import Data ( Shell(..), ShellCard(..), ID(..) )
 import Prog.Data ( Env(..) )
 import Load.Data ( Tile(..), TilePos(..), TileTex(..), DrawState(..), DSStatus(..) )
 import Luau.Data ( ShellCmd(..) )
@@ -28,26 +28,92 @@ processShellCommand ds ShToggle       = do
     $ ds { dsShell  = toggleShell (dsShell ds)
          , dsStatus = DSSReload }
 processShellCommand ds (ShKey key mk)
-  = if key ≡ GLFW.Key'Backspace then
-    return $ LoadResultDrawState
+  | GLFW.modifierKeysControl mk
+  = case key of
+      GLFW.Key'C → return $ LoadResultDrawState $ ds { dsShell  = sh'
+                                                     , dsStatus = DSSReload }
+                where sh' = sh { shTabbed = Nothing
+                               , shCursor = 0
+                               , shInpStr = ""
+                               , shCache  = ""
+                               , shHistI  = -1
+                               , shOutStr = retstring }
+                      retstring = shOutStr sh ⧺ shPrompt sh ⧺ shInpStr sh ⧺ "\n"
+                      sh = dsShell ds
+      GLFW.Key'A → return $ LoadResultDrawState
+                     $ ds { dsShell  = (dsShell ds) { shCursor = 0 }
+                          , dsStatus = DSSReload }
+      GLFW.Key'E → return $ LoadResultDrawState
+                     $ ds { dsShell = (dsShell ds)
+                            { shCursor = length (shInpStr (dsShell ds)) }
+                          , dsStatus = DSSReload }
+      _     → return LoadResultSuccess
+  | key ≡ GLFW.Key'Backspace
+  = return $ LoadResultDrawState
       $ ds { dsShell  = delShell (dsShell ds)
            , dsStatus = DSSReload }
-  else if key ≡ GLFW.Key'Enter then do
-    (Log _   env _   _   _) ← askLog
-    newSh ← liftIO $ evalShell env $ dsShell ds
-    return $ LoadResultDrawState
-      $ ds { dsShell  = newSh }
-  else do
-    str ← liftIO $ GLFW.calcInpKey key mk
-    return $ LoadResultDrawState
-      $ ds { dsShell  = stringShell (dsShell ds) str
+  | key ≡ GLFW.Key'Enter
+  = do (Log _   env _   _   _) ← askLog
+       newSh ← liftIO $ evalShell env $ dsShell ds
+       return $ LoadResultDrawState
+         $ ds { dsShell  = newSh }
+  | key ≡ GLFW.Key'Up
+  = return $ LoadResultDrawState
+      $ ds { dsShell  = upShell (dsShell ds)
            , dsStatus = DSSReload }
+  | key ≡ GLFW.Key'Down
+  = return $ LoadResultDrawState
+      $ ds { dsShell  = downShell (dsShell ds)
+           , dsStatus = DSSReload }
+  | key ≡ GLFW.Key'Right
+  = return $ LoadResultDrawState
+      $ ds { dsShell  = cursorShell 1 (dsShell ds)
+           , dsStatus = DSSReload }
+  | key ≡ GLFW.Key'Left
+  = return $ LoadResultDrawState
+      $ ds { dsShell  = cursorShell (-1) (dsShell ds)
+           , dsStatus = DSSReload }
+  | otherwise
+  = do str ← liftIO $ GLFW.calcInpKey key mk
+       return $ LoadResultDrawState
+         $ ds { dsShell  = stringShell (dsShell ds) str
+              , dsStatus = DSSReload }
 processShellCommand ds (ShEcho str)
   = return $ LoadResultDrawState
       $ ds { dsShell  = (dsShell ds) { shRet = (shRet (dsShell ds)) ⧺ str }
            , dsStatus = DSSReload }
 processShellCommand _  cmd            = do
   return $ LoadResultError $ "unknown shell command: " ⧺ show cmd
+
+-- sends directional key to shell
+directionShell ∷ ShellCard → Shell → Shell
+directionShell ShellUp    sh = upShell   sh
+directionShell ShellDown  sh = downShell sh
+directionShell ShellLeft  sh = cursorShell (-1) sh
+directionShell ShellRight sh = cursorShell 1    sh
+
+-- cycles through shell history
+upShell ∷ Shell → Shell
+upShell sh
+  | shHist sh ≡ [] = sh
+  | otherwise      = sh { shInpStr = shinpstr
+                        , shHistI  = incShHist
+                        , shCursor = length shinpstr }
+  where incShHist = if shHistI sh ≥ length (shHist sh) then 0 else shHistI sh + 1
+        shinpstr  = shHist sh !! (incShHist `mod` length (shHist sh))
+downShell ∷ Shell → Shell
+downShell sh
+  | shHist sh ≡ [] = sh
+  | shHistI sh ≥ 0 = sh { shInpStr = shinpstr
+                        , shHistI  = max (-1) (shHistI sh - 1)
+                        , shCursor = length shinpstr }
+  | otherwise      = sh { shInpStr = "" }
+  where shinpstr = shHist sh !! (shHistI sh `mod` length (shHist sh))
+-- move shell cursor
+cursorShell ∷ Int → Shell → Shell
+cursorShell n sh = sh { shCursor = n' }
+  where n' = max 0 $ min (length (shInpStr sh)) $ (shCursor sh) + n
+
 
 -- | turns shell on and off
 toggleShell ∷ Shell → Shell
@@ -58,14 +124,14 @@ stringShell ∷ Shell → String → Shell
 stringShell sh str = sh { shTabbed = Nothing
                         , shInpStr = newStr
                         , shCursSt = True
-                        , shCursor = (shCursor sh) + (length str) }
-  where newStr = (take (shCursor sh) (shInpStr sh)) ⧺ str ⧺ (drop (shCursor sh) (shInpStr sh))
+                        , shCursor = shCursor sh + length str }
+  where newStr = take (shCursor sh) (shInpStr sh) ⧺ str ⧺ drop (shCursor sh) (shInpStr sh)
 
 -- | deletes a character from the shell
 delShell ∷ Shell → Shell
 delShell sh = sh { shInpStr = newStr
-                 , shCursor = max 0 ((shCursor sh) - 1) }
-  where newStr = initS (take (shCursor sh) (shInpStr sh)) ⧺ (drop (shCursor sh) (shInpStr sh))
+                 , shCursor = max 0 (shCursor sh - 1) }
+  where newStr = initS (take (shCursor sh) (shInpStr sh)) ⧺ drop (shCursor sh) (shInpStr sh)
         initS ""  = ""
         initS str = init str
 
@@ -74,10 +140,9 @@ evalShell ∷ Env → Shell → IO Shell
 evalShell env shell = do
   let ls = envLuaSt env
   if shLibs shell then
-    return shell
+    return ()
   else do
     loadShCmds env
-    return shell
   (ret,outbuff) ← execShell ls (shInpStr shell)
   let retstring = if length (shOutStr shell) ≡ 0
         then case outbuff of
