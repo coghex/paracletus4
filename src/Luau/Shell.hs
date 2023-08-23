@@ -2,13 +2,43 @@
 module Luau.Shell where
 import Prelude()
 import UPrelude
+import Control.Monad.IO.Class ( liftIO )
 import Data.List.Split ( splitOn )
 import Data ( Shell(..), ID(..) )
-import Load.Data ( Tile(..), TilePos(..), TileTex(..) )
+import Load.Data ( Tile(..), TilePos(..), TileTex(..), DrawState(..), DSStatus(..) )
+import Luau.Data ( ShellCmd(..) )
+import Sign.Log (LogT(..), MonadLog(..), log', sendCapture)
+import Sign.Data (LoadResult(..), Capture(..))
 import Vulk.Font ( indexTTFData, TTFData(..), GlyphMetrics(..) )
+import qualified Vulk.GLFW as GLFW
 
+-- | processing of shell commands
+processShellCommand ∷ (MonadLog μ,MonadFail μ) ⇒ DrawState → ShellCmd → LogT μ LoadResult
+processShellCommand ds ShToggle       = do
+  -- sets the capture in the input thread
+  let cap = if shLoaded (dsShell ds) then CaptureNULL else CaptureShell
+  sendCapture cap
+  return $ LoadResultDrawState
+    $ ds { dsShell  = toggleShell (dsShell ds)
+         , dsStatus = DSSReload }
+processShellCommand ds (ShKey key mk) = do
+  str ← liftIO $ GLFW.calcInpKey key mk
+  return $ LoadResultDrawState
+    $ ds { dsShell  = stringShell (dsShell ds) str
+         , dsStatus = DSSReload }
+processShellCommand _  cmd            = do
+  return $ LoadResultError $ "unknown shell command: " ⧺ show cmd
+
+-- | turns shell on and off
 toggleShell ∷ Shell → Shell
 toggleShell shell = shell { shLoaded = not (shLoaded shell) }
+
+-- | sends string to shell
+stringShell ∷ Shell → String → Shell
+stringShell sh str = sh { shTabbed = Nothing
+                        , shInpStr = newStr
+                        , shCursor = (shCursor sh) + (length str) }
+  where newStr = (take (shCursor sh) (shInpStr sh)) ⧺ str ⧺ (drop (shCursor sh) (shInpStr sh))
 
 -- | a combination of every tile needed for the shell
 shTiles ∷ Int → [TTFData] → Shell → [Tile]

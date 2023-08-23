@@ -6,6 +6,7 @@ module Luau.Data where
 -- data for lua interpreter
 import Data.Aeson
 import GHC.Generics
+import qualified Vulk.GLFW as GLFW
 
 data InputJson   = InputJson   { keySettings ∷ KeySettings } deriving (Generic, Show)
 instance FromJSON InputJson where
@@ -33,4 +34,4 @@ instance ToJSON   KeySettings where
         pairs ("keyEscape" .= keyEscape <> "keyTest" .= keyTest <> "keyShell" .= keyShell)
 
 -- | possible commands to send the shell
-data ShellCmd = ShToggle | ShNULL deriving (Show, Eq)
+data ShellCmd = ShToggle | ShKey GLFW.Key GLFW.ModifierKeys | ShNULL deriving (Show, Eq)

@@ -14,10 +14,11 @@ import Data ( ID )
 import Load.Data ( DynData(..), TextureMap(..), Tex(..) )
 import Prog.Data ( Env(..), ChanName(..), QueueName(..), QueueCmd(..)
                  , TVarName(..), TVarValue(..))
-import Sign.Data ( LogLevel(..), Event(..), TState(..), LoadCmd(..)
-                 , SysAction(..), SettingsChange(..) )
+import Sign.Data ( LogLevel(..), Event(..), TState(..), LoadCmd(..), InpCmd(..)
+                 , SysAction(..), SettingsChange(..), Capture(..)
+                 , InputStateChange(..) )
 import Sign.Var ( atomically )
-import Sign.Queue ( writeQueue, readChan, tryReadChan, writeChan )
+import Sign.Queue ( readChan, tryReadChan, writeChan )
 import Sign.Util ( readChan', writeQueue'', tryReadQueue'', readTVar''
                  , writeTVar'', modifyTVar'' )
 import Vulk.Font (TTFData(..))
@@ -124,6 +125,12 @@ writeIDChan ∷ (MonadLog μ, MonadFail μ) ⇒ ID → μ ()
 writeIDChan id = do
   (Log _   env _   _   _) ← askLog
   liftIO $ atomically $ writeChan (envIDChan env) id
+
+-- | sends a capture to the input queue
+sendCapture ∷ (MonadLog μ, MonadFail μ) ⇒ Capture → μ ()
+sendCapture capture = do
+  (Log _   env _   _   _) ← askLog
+  liftIO $ writeQueue'' env InputQueue $ QCInpCmd $ InpState $ ISCCapture capture
 
 -- | sends a syscommand over the event queue
 sendSys ∷ (MonadLog μ, MonadFail μ) ⇒ SysAction → μ ()

@@ -17,8 +17,7 @@ import Data.Map as Map
 import Data.String ( fromString )
 import Load.Data
 import Load.Util ( emptyTiles )
-import Luau.Shell ( toggleShell, shTiles )
-import Luau.Data ( ShellCmd(..) )
+import Luau.Shell ( toggleShell, shTiles, processShellCommand )
 import Prog.Data
 import Prog.Buff ( generateDynData )
 import Sign.Data
@@ -151,9 +150,7 @@ processCommand ds cmd = case cmd of
         sendTest
         return LoadResultSuccess
   LoadNew lc → newChunk ds lc
-  LoadShell ShToggle → return $ LoadResultDrawState
-      $ ds { dsShell  = toggleShell (dsShell ds)
-           , dsStatus = DSSReload }
+  LoadShell shcmd → processShellCommand ds shcmd
   LoadReload → do
     return $ LoadResultDrawState ds { dsStatus = DSSReload }
   LoadRecreate → do

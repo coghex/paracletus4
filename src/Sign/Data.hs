@@ -75,11 +75,17 @@ data InputEvent
   deriving (Show, Eq)
 
 -- | possible changes to the input state
-data InputStateChange = ISCRegisterKeys String | ISCNULL deriving (Show, Eq)
+data InputStateChange = ISCRegisterKeys String
+                      | ISCCapture Capture
+                      | ISCNULL deriving (Show, Eq)
 
 -- | input state is simply the state of the input thread
 data InputState = InputState { keyMap  ∷ KeyMap
+                             , keyCap  ∷ Capture
                              , mouseSt ∷ MouseState } deriving (Show, Eq)
+
+-- | the type of captured input
+data Capture = CaptureShell | CaptureNULL deriving (Show, Eq)
 
 -- | the mouse state, updated every tick of the input thread
 data MouseState = MouseState { mouse1   ∷ Maybe (Double,Double)

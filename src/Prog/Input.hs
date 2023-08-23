@@ -21,7 +21,7 @@ import Sign.Data
     ( Event(..), LogLevel(..), EventResult(..), LoadCmd(..)
     , SysAction(..), TState(..), InpCmd(..), InputEvent(..)
     , SettingsChange(..), InputState(..), MouseState(..)
-    , InputStateChange(..) )
+    , InputStateChange(..), Capture(..) )
 import Sign.Var ( atomically, readTVar, writeTVar, modifyTVar' )
 import Sign.Queue
     ( readChan, tryReadChan, tryReadQueue, writeQueue )
@@ -78,16 +78,19 @@ processInputQueue env is = do
 
 -- | processes input commands, which can be mouse clicks, keys, or state changes
 processInput ∷ Env → InputState → InpCmd → IO EventResult
-processInput env is (InpEvent (InputKey win key k ks mk)) = do
+processInput env is (InpEvent (InputKey win key k ks mk))       = do
   processKey env key ks mk is
   return EventResultSuccess
 processInput env is (InpEvent (InputMouseButton win mb mbs mk)) = do
   processMouseButton env win mb mbs mk
   return EventResultSuccess
-processInput env is (InpState (ISCRegisterKeys path))     = do
+processInput env is (InpState (ISCRegisterKeys path))           = do
   log' env (LogDebug 1) "registering keys..."
   keyM ← readKeySettings env path
   let is' = is { keyMap = keyM }
+  return $ EventResultInputState is'
+processInput env is (InpState (ISCCapture cap))                 = do
+  let is' = is { keyCap = cap }
   return $ EventResultInputState is'
 processInput env _  inpCmd
   = return $ EventResultError $ "unknown command " ⧺ show inpCmd
@@ -119,7 +122,10 @@ processKey env key ks mk is = do
         writeQueue'' env LoadQueue $ QCLoadCmd LoadTest
       KFShell → do
         writeQueue'' env LoadQueue $ QCLoadCmd $ LoadShell ShToggle
-      keyFunc → return ()
+      keyFunc → if keyCap is ≡ CaptureShell then
+          writeQueue'' env LoadQueue $ QCLoadCmd $ LoadShell $ ShKey key mk
+        else
+          return ()
 
 createKeyMap ∷ KeySettings → KeyMap
 createKeyMap (KeySettings kEscape kTest kShell) = km
@@ -130,6 +136,7 @@ createKeyMap (KeySettings kEscape kTest kShell) = km
 
 initInputState ∷ InputState
 initInputState = InputState { keyMap  = KeyMap Map.empty
+                            , keyCap  = CaptureNULL
                             , mouseSt = initMouseState }
 initMouseState ∷ MouseState
 initMouseState = MouseState { mouse1   = Nothing
