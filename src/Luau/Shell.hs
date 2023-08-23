@@ -285,7 +285,7 @@ findCursPos ttfdata (ch:str)  = case indexTTFData ttfdata ch of
   Just (TTFData _ _ (GlyphMetrics _ _ _ _ chA)) → wid + findCursPos ttfdata str
     where wid = 2*chA
 
--- | generates the tiles for a singe string
+-- | generates the tiles for a single string
 genStringTiles ∷ Int → [TTFData] → Double → (Double,Double) → String → [Tile]
 genStringTiles _        _       _  _     []         = []
 genStringTiles fontsize ttfdata x0 (x,y) (' ':str)

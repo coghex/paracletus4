@@ -17,7 +17,7 @@ import Data.Map as Map
 import Data.String ( fromString )
 import Load.Data
 import Load.Util ( emptyTiles )
-import Luau.Shell ( toggleShell, shTiles, processShellCommand )
+import Luau.Shell ( toggleShell, shTiles, processShellCommand, genStringTiles )
 import Prog.Data
 import Prog.Buff ( generateDynData )
 import Sign.Data
@@ -25,6 +25,7 @@ import Sign.Log
 import Time ( processTimer )
 import Vulk.Calc ( calcVertices )
 import Vulk.Data ( Verts(Verts) )
+import Vulk.Font ( TTFData(..) )
 import Util ( newID )
 import Control.Concurrent (threadDelay)
 import Control.Monad.IO.Class ( liftIO, MonadIO(..) )
@@ -81,7 +82,8 @@ processCommands ds = do
           DSSReload → do
             fontsize ← readFontSize
             ttfdata ← readFontMapM
-            let tiles = (shTiles fontsize ttfdata (dsShell ds')) ⧺ findTiles fontsize (dsCurr ds) (dsWins ds)
+            let tiles = (shTiles fontsize ttfdata (dsShell ds'))
+                      ⧺ findTiles fontsize ttfdata (dsCurr ds) (dsWins ds)
                 dyns  = generateDynData tiles
             modifyTVar DynsTVar $ TVDyns dyns
             processCommands ds' { dsStatus = DSSNULL }
@@ -91,7 +93,8 @@ processCommands ds = do
             log' (LogDebug 1) $ "[Load] regenerating verts and dyns"
             -- TODO: find why we need to reverse this
             let verts = Verts $ calcVertices $ reverse tiles
-                tiles = (shTiles fontsize ttfdata (dsShell ds')) ⧺ findTiles fontsize (dsCurr ds) (dsWins ds)
+                tiles = (shTiles fontsize ttfdata (dsShell ds'))
+                      ⧺ findTiles fontsize ttfdata (dsCurr ds) (dsWins ds)
                 dyns  = generateDynData tiles
             modifyTVar VertsTVar $ TVVerts verts
             modifyTVar DynsTVar $ TVDyns dyns
@@ -107,21 +110,23 @@ processCommands ds = do
     Nothing → return ds
 
 -- | returns the tiles in the current window
-findTiles ∷ Int → String → Map.Map String Window → [Tile]
-findTiles fontsize win wins = case Map.lookup win wins of
+findTiles ∷ Int → [TTFData] → String → Map.Map String Window → [Tile]
+findTiles fontsize ttfdata win wins = case Map.lookup win wins of
   Nothing → []
-  Just w0 → generateWinTiles fontsize (winElems w0)
+  Just w0 → generateWinTiles fontsize ttfdata (winElems w0)
 -- | returns the tiles in a list of elements
-generateWinTiles ∷ Int → [WinElem] → [Tile]
-generateWinTiles _        []       = []
-generateWinTiles fontsize (we:wes) = tiles ⧺ generateWinTiles fontsize wes
-  where tiles = generateElemTiles fontsize we
-generateElemTiles ∷ Int → WinElem → [Tile]
-generateElemTiles fontsize (WinElemTile tile) = [tile']
+generateWinTiles ∷ Int → [TTFData] → [WinElem] → [Tile]
+generateWinTiles _        _       []       = []
+generateWinTiles fontsize ttfdata (we:wes) = tiles ⧺ generateWinTiles fontsize ttfdata wes
+  where tiles = generateElemTiles fontsize ttfdata we
+generateElemTiles ∷ Int → [TTFData] → WinElem → [Tile]
+generateElemTiles fontsize _       (WinElemTile tile) = [tile']
   where Tile id tp (TileTex tind tsiz t) = tile
         tile'                         = Tile id tp (TileTex tind tsiz (t + fontsize))
-generateElemTiles fontsize (WinElemText text) = [Tile IDNULL (TilePos (0,0) (1,1)) (TileTex (0,0) (1,1) fontsize)]
-generateElemTiles _        WinElemNULL        = []
+generateElemTiles fontsize ttfdata (WinElemText text)
+  = genStringTiles fontsize ttfdata (fst pos) pos $ textString text
+    where pos = textPos text
+generateElemTiles _        _       WinElemNULL        = []
 
 -- | this is the case statement for processing load commands
 processCommand ∷ (MonadLog μ,MonadFail μ)
@@ -184,11 +189,11 @@ newChunk ds (LCAtlas win pos tex tind) = do
       tt            = findAtlas tind tex tm
   writeIDChan id0
   return $ LoadResultDrawState $ newTile ds win tile
-newChunk ds (LCText win (Text pos siz text)) = do
+newChunk ds (LCText win text) = do
   id0 ← liftIO newID
-  let tile = Tile id0 (TilePos pos siz) $ TileTex (0,0) (1,1) (-10)
+  --let tile = Tile id0 (TilePos pos siz) $ TileTex (0,0) (1,1) (-10)
   writeIDChan id0
-  return $ LoadResultDrawState $ newTile ds win tile
+  return $ LoadResultDrawState $ newText ds win text
 newChunk _  LCNULL                     = return LoadResultSuccess
 newChunk _  lc                         = do
   log' LogWarn $ "[Load] unknown load chunk command " ⧺ show lc
@@ -196,15 +201,17 @@ newChunk _  lc                         = do
 
 -- | adds a new tile to a window
 newTile ∷ DrawState → String → Tile → DrawState
-newTile ds win tile = ds { dsWins   = addTileToWin (dsWins ds) win tile
+newTile ds win tile = ds { dsWins   = addElemToWin (dsWins ds) win (WinElemTile tile)
                          , dsStatus = DSSRecreate }
--- { dsWins = addTileToWin (dsWins ds) win tile }
-addTileToWin ∷ Map.Map String Window → String → Tile → Map.Map String Window
-addTileToWin wins win tile = case Map.lookup win wins of
+-- | adds a new text section to a window
+newText ∷ DrawState → String → Text → DrawState
+newText ds win text = ds { dsWins   = addElemToWin (dsWins ds) win (WinElemText text)
+                         , dsStatus = DSSRecreate }
+addElemToWin ∷ Map.Map String Window → String → WinElem → Map.Map String Window
+addElemToWin wins win elem = case Map.lookup win wins of
   Nothing → wins
   Just w0 → Map.insert win win' wins
-    where win' = w0 { winElems = e : (winElems w0) }
-          e    = WinElemTile tile
+    where win' = w0 { winElems = elem : winElems w0 }
 
 -- | converts tex to tiletex at input tex n
 findTex ∷ String → [(String,Tex)] → TileTex
