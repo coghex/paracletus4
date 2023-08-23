@@ -52,7 +52,8 @@ data WinElem = WinElemTile Tile
              | WinElemNULL deriving (Show, Eq)
 
 -- | defines a section of text
-data Text = Text { textPos    ∷ (Double,Double)
+data Text = Text { textID     ∷ ID
+                 , textPos    ∷ (Double,Double)
                  , textSize   ∷ (Double,Double)
                  , textString ∷ String } deriving (Show, Eq)
 

@@ -15,16 +15,16 @@ import Control.Monad.Catch ( catch )
 import System.Directory (getDirectoryContents)
 import System.FilePath (combine)
 import Luau.Command
-import Prog.Data ( Env(..), ChanName(..) )
+import Prog.Data ( Env(..), ChanName(..), QueueName(..), QueueCmd(..) )
 import Sign.Data
     ( Event(EventLog, EventSys),
-      LogLevel(..),
+      LogLevel(..), LoadCmd(..),
       SysAction(SysRecreate),
       TState(..) )
 import Sign.Thread (threadDelay)
 import Sign.Queue (readChan, tryReadChan, writeQueue)
 import Sign.Var (atomically)
-import Sign.Util ( log', readChan', tryReadQueue' )
+import Sign.Util ( log', readChan', tryReadQueue', writeQueue'' )
 
 -- | initialization of each mod file, as well as registering all
 --   of the raw functions, and kickoff of the vertex generation

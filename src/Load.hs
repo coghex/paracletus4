@@ -82,9 +82,10 @@ processCommands ds = do
           DSSReload → do
             fontsize ← readFontSize
             ttfdata ← readFontMapM
-            let tiles = (shTiles fontsize ttfdata (dsShell ds'))
-                      ⧺ findTiles fontsize ttfdata (dsCurr ds) (dsWins ds)
+            let tiles = shell ⧺ wins
+                wins  = findTiles fontsize ttfdata (dsCurr ds) (dsWins ds)
                 dyns  = generateDynData tiles
+                shell = shTiles fontsize ttfdata (dsShell ds')
             modifyTVar DynsTVar $ TVDyns dyns
             processCommands ds' { dsStatus = DSSNULL }
           DSSRecreate → do
@@ -93,9 +94,10 @@ processCommands ds = do
             log' (LogDebug 1) $ "[Load] regenerating verts and dyns"
             -- TODO: find why we need to reverse this
             let verts = Verts $ calcVertices $ reverse tiles
-                tiles = (shTiles fontsize ttfdata (dsShell ds'))
-                      ⧺ findTiles fontsize ttfdata (dsCurr ds) (dsWins ds)
+                tiles = shell ⧺ wins
+                wins  = findTiles fontsize ttfdata (dsCurr ds) (dsWins ds)
                 dyns  = generateDynData tiles
+                shell = shTiles fontsize ttfdata (dsShell ds')
             modifyTVar VertsTVar $ TVVerts verts
             modifyTVar DynsTVar $ TVDyns dyns
             sendSys SysRecreate
@@ -148,13 +150,13 @@ processCommand ds cmd = case cmd of
           return LoadResultSuccess
         else
           return $ LoadResultDrawState $ ds { dsCurr = name
-                                            , dsStatus = DSSReload }
+                                            , dsStatus = DSSRecreate }
       Nothing → do
         log' LogWarn $ "[Load] window " ⧺ name ⧺ " doesnt exist"
         return LoadResultSuccess
   LoadTest → do
-        sendTest
-        return LoadResultSuccess
+        --sendTest
+        return $ LoadResultDrawState $ ds { dsStatus = DSSRecreate }
   LoadID → do
     log' LogInfo "creating id..."
     ID id0 ← liftIO newID
@@ -193,7 +195,7 @@ newChunk ds (LCText win text) = do
   id0 ← liftIO newID
   --let tile = Tile id0 (TilePos pos siz) $ TileTex (0,0) (1,1) (-10)
   writeIDChan id0
-  return $ LoadResultDrawState $ newText ds win text
+  return $ LoadResultDrawState $ newText ds win text id0
 newChunk _  LCNULL                     = return LoadResultSuccess
 newChunk _  lc                         = do
   log' LogWarn $ "[Load] unknown load chunk command " ⧺ show lc
@@ -204,9 +206,10 @@ newTile ∷ DrawState → String → Tile → DrawState
 newTile ds win tile = ds { dsWins   = addElemToWin (dsWins ds) win (WinElemTile tile)
                          , dsStatus = DSSRecreate }
 -- | adds a new text section to a window
-newText ∷ DrawState → String → Text → DrawState
-newText ds win text = ds { dsWins   = addElemToWin (dsWins ds) win (WinElemText text)
-                         , dsStatus = DSSRecreate }
+newText ∷ DrawState → String → Text → ID → DrawState
+newText ds win text id = ds { dsWins   = addElemToWin (dsWins ds) win (WinElemText text')
+                            , dsStatus = DSSRecreate }
+  where text' = text { textID = id }
 addElemToWin ∷ Map.Map String Window → String → WinElem → Map.Map String Window
 addElemToWin wins win elem = case Map.lookup win wins of
   Nothing → wins

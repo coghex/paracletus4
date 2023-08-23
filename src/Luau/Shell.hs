@@ -27,7 +27,7 @@ processShellCommand ds ShToggle       = do
   sendTimerState ShellCursorTimer tst
   return $ LoadResultDrawState
     $ ds { dsShell  = toggleShell (dsShell ds)
-         , dsStatus = DSSReload }
+         , dsStatus = DSSRecreate }
 processShellCommand ds (ShKey key mk)
   | GLFW.modifierKeysControl mk
   = case key of
@@ -247,7 +247,7 @@ shTiles fontsize ttfdata sh = tiles
   where tiles     = curstiles ⧺ txttiles ⧺ boxtiles
         pos       = (-10,5)
         boxtiles  = boxTiles fontsize pos sh
-        txttiles  = txtTiles fontsize ttfdata pos sh 256
+        txttiles  = txtTiles fontsize ttfdata pos sh 512
         curstiles = cursTiles fontsize ttfdata pos sh
 
 -- | the cursor tiles

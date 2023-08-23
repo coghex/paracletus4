@@ -95,7 +95,7 @@ hsNewAtlas env x y w h win t tx ty = do
 hsNewText ∷ Env → Double → Double → Double → Double → String → String → Lua.Lua String
 hsNewText env x y w h win text = do
   Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew
-             $ LCText win $ Text (x,y) (w,h) text
+             $ LCText win $ Text IDNULL (x,y) (w,h) text
   idin ← Lua.liftIO $ atomically $ tryReadChan (envIDChan env)
   case idin of
     Nothing       → return "NULL"
