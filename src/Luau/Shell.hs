@@ -27,7 +27,7 @@ processShellCommand ds ShToggle       = do
   sendTimerState ShellCursorTimer tst
   return $ LoadResultDrawState
     $ ds { dsShell  = toggleShell (dsShell ds)
-         , dsStatus = DSSRecreate }
+         , dsStatus = DSSReload }
 processShellCommand ds (ShKey key mk)
   | GLFW.modifierKeysControl mk
   = case key of

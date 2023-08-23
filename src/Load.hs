@@ -83,7 +83,7 @@ processCommands ds = do
             fontsize ← readFontSize
             ttfdata ← readFontMapM
             let tiles = shell ⧺ wins
-                wins  = findTiles fontsize ttfdata (dsCurr ds) (dsWins ds)
+                wins  = findTiles fontsize ttfdata (dsCurr ds') (dsWins ds')
                 dyns  = generateDynData tiles
                 shell = shTiles fontsize ttfdata (dsShell ds')
             modifyTVar DynsTVar $ TVDyns dyns
@@ -91,13 +91,14 @@ processCommands ds = do
           DSSRecreate → do
             fontsize ← readFontSize
             ttfdata ← readFontMapM
-            log' (LogDebug 1) $ "[Load] regenerating verts and dyns"
             -- TODO: find why we need to reverse this
             let verts = Verts $ calcVertices $ reverse tiles
                 tiles = shell ⧺ wins
-                wins  = findTiles fontsize ttfdata (dsCurr ds) (dsWins ds)
+                wins  = findTiles fontsize ttfdata (dsCurr ds') (dsWins ds')
                 dyns  = generateDynData tiles
                 shell = shTiles fontsize ttfdata (dsShell ds')
+            log' (LogDebug 1) $ "[Load] regenerating verts and dyns: "
+                              ⧺ show (length tiles)
             modifyTVar VertsTVar $ TVVerts verts
             modifyTVar DynsTVar $ TVDyns dyns
             sendSys SysRecreate
@@ -203,12 +204,10 @@ newChunk _  lc                         = do
 
 -- | adds a new tile to a window
 newTile ∷ DrawState → String → Tile → DrawState
-newTile ds win tile = ds { dsWins   = addElemToWin (dsWins ds) win (WinElemTile tile)
-                         , dsStatus = DSSReload }
+newTile ds win tile = ds { dsWins   = addElemToWin (dsWins ds) win (WinElemTile tile) }
 -- | adds a new text section to a window
 newText ∷ DrawState → String → Text → ID → DrawState
-newText ds win text id = ds { dsWins   = addElemToWin (dsWins ds) win (WinElemText text')
-                            , dsStatus = DSSReload }
+newText ds win text id = ds { dsWins   = addElemToWin (dsWins ds) win (WinElemText text') }
   where text' = text { textID = id }
 addElemToWin ∷ Map.Map String Window → String → WinElem → Map.Map String Window
 addElemToWin wins win elem = case Map.lookup win wins of

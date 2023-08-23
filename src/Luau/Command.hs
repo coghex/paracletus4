@@ -109,8 +109,10 @@ hsReload env = Lua.liftIO $ writeQueue'' env LoadQueue
 
 -- | reloads the command buffers of the engine
 hsRecreate ∷ Env → Lua.Lua ()
-hsRecreate env = Lua.liftIO $ writeQueue'' env LoadQueue
-  $ QCLoadCmd LoadRecreate
+hsRecreate env = do
+  luaEvent env $ EventLog LogInfo $ "[Luau] recreating..."
+  Lua.liftIO $ writeQueue'' env LoadQueue
+    $ QCLoadCmd LoadRecreate
 
 -- | sends the font string to the main thread where we send
 --   a font load cmd to the load thread
