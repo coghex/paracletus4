@@ -204,11 +204,11 @@ newChunk _  lc                         = do
 -- | adds a new tile to a window
 newTile ∷ DrawState → String → Tile → DrawState
 newTile ds win tile = ds { dsWins   = addElemToWin (dsWins ds) win (WinElemTile tile)
-                         , dsStatus = DSSRecreate }
+                         , dsStatus = DSSReload }
 -- | adds a new text section to a window
 newText ∷ DrawState → String → Text → ID → DrawState
 newText ds win text id = ds { dsWins   = addElemToWin (dsWins ds) win (WinElemText text')
-                            , dsStatus = DSSRecreate }
+                            , dsStatus = DSSReload }
   where text' = text { textID = id }
 addElemToWin ∷ Map.Map String Window → String → WinElem → Map.Map String Window
 addElemToWin wins win elem = case Map.lookup win wins of
