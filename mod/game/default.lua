@@ -2,6 +2,7 @@
 require "mod/base/game"
 require "mod/base/json"
 require "mod/game/default/menu"
+require "mod/game/default/load"
 require "mod/game/default/input"
 require "mod/game/default/texture"
 -- this runs once at the beginning
@@ -10,6 +11,8 @@ function initMod ()
     game.logDebug("default mod: initMod()")
     initInput ()
     initTextures ()
+    ls = initLoadScreen ()
+    game.selectWin (ls)
     m = initMenu ()
     game.selectWin (m)
     game.start()

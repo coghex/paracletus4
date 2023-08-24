@@ -168,7 +168,7 @@ processCommand ds cmd = case cmd of
   LoadID → do
     log' LogInfo "creating id..."
     ID id0 ← liftIO newID
-    writeIDChan $ ID id0
+    writeIDTVar $ ID id0
     return LoadResultSuccess
   LoadNew lc → newChunk ds lc
   LoadShell shcmd → processShellCommand ds shcmd
@@ -183,26 +183,26 @@ processCommand ds cmd = case cmd of
 newChunk ∷ (MonadLog μ,MonadFail μ) ⇒ DrawState → LoadChunk → LogT μ LoadResult
 newChunk ds (LCWindow name)            = do
   ID id0 ← liftIO newID
-  writeIDChan $ ID id0
+  writeIDTVar $ ID id0
   return $ LoadResultDrawState $ ds { dsWins = Map.insert id0 (Window name []) (dsWins ds) }
 newChunk ds (LCTile  win pos tex)      = do
   id0 ← liftIO newID
   let TextureMap tm = dsTexMap ds
       tile          = Tile id0 pos tt
       tt            = findTex tex tm
-  writeIDChan id0
+  writeIDTVar id0
   return $ LoadResultDrawState $ newTile ds win tile
 newChunk ds (LCAtlas win pos tex tind) = do
   id0 ← liftIO newID
   let TextureMap tm = dsTexMap ds
       tile          = Tile id0 pos tt
       tt            = findAtlas tind tex tm
-  writeIDChan id0
+  writeIDTVar id0
   return $ LoadResultDrawState $ newTile ds win tile
 newChunk ds (LCText win text) = do
   id0 ← liftIO newID
   --let tile = Tile id0 (TilePos pos siz) $ TileTex (0,0) (1,1) (-10)
-  writeIDChan id0
+  writeIDTVar id0
   return $ LoadResultDrawState $ newText ds win text id0
 newChunk _  LCNULL                     = return LoadResultSuccess
 newChunk _  lc                         = do

@@ -9,11 +9,11 @@ import Data.Maybe ( fromMaybe )
 import Numeric ( readHex )
 import Data (ID(..))
 import Text.Read ( readMaybe )
-import Prog.Data ( Env(..), QueueName(..), QueueCmd(..), ChanName(..) )
+import Prog.Data
 import Sign.Data
 import Sign.Queue ( writeQueue, readChan, tryReadChan )
 import Sign.Var ( atomically, readTVar )
-import Sign.Util ( writeQueue'', writeChan'' )
+import Sign.Util ( writeQueue'', writeChan'', readTVar'' )
 import Load.Data ( Tile(..), TilePos(..), TileTex(..), Text(..) )
 import Luau.Util ( vtail, vhead, luaEvent )
 import Luau.Data ( ShellCmd(..) )
@@ -52,8 +52,17 @@ hsRegisterTextureMap env str = Lua.liftIO $ writeQueue'' env LoadQueue
 hsNewWindow ∷ Env → String → Lua.Lua String
 hsNewWindow env name = do
   Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew $ LCWindow name
-  ID id0 ← Lua.liftIO $ atomically $ readChan (envIDChan env)
-  return id0
+  readID env
+
+-- | reads an id from the load thread
+readID ∷ Env → Lua.Lua String
+readID env = do
+  idin ← Lua.liftIO $ readTVar'' env IDTVar
+  case idin of
+    Nothing              → readID env
+    Just (TVID (ID id0)) → return id0
+    Just _               → return "ERR"
+
 -- | selects a new window
 hsSelectWin ∷ Env → String → Lua.Lua ()
 hsSelectWin env name = Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadState $ LSCSelectWin name
@@ -62,43 +71,27 @@ hsSelectWin env name = Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ Loa
 hsNewID ∷ Env → Lua.Lua String
 hsNewID env = do
   Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd LoadID
-  idin ← Lua.liftIO $ atomically $ tryReadChan (envIDChan env)
-  case idin of
-    Nothing       → return "NULL"
-    Just (ID id0) → return id0
-    Just _        → return "ERR"
+  readID env
 
 -- | creates a new tile
 hsNewTile ∷ Env → Double → Double → Double → Double → String → String → Lua.Lua String
 hsNewTile env x y w h win t = do
   Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew $ LCTile win (TilePos (x,y) (w,h)) t
-  idin ← Lua.liftIO $ atomically $ tryReadChan (envIDChan env)
-  case idin of
-    Nothing       → return "NULL"
-    Just (ID id0) → return id0
-    Just _        → return "ERR"
+  readID env
 
 -- | creates a new tile
 hsNewAtlas ∷ Env → Double → Double → Double → Double → String
            → String → Int → Int → Lua.Lua String
 hsNewAtlas env x y w h win t tx ty = do
   Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew $ LCAtlas win (TilePos (x,y) (w,h)) t (tx,ty)
-  idin ← Lua.liftIO $ atomically $ tryReadChan (envIDChan env)
-  case idin of
-    Nothing       → return "NULL"
-    Just (ID id0) → return id0
-    Just _        → return "ERR"
+  readID env
 
 -- | create a new section of text
 hsNewText ∷ Env → Double → Double → Double → Double → String → String → Lua.Lua String
 hsNewText env x y w h win text = do
   Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew
              $ LCText win $ Text IDNULL (x,y) (w,h) text
-  idin ← Lua.liftIO $ atomically $ tryReadChan (envIDChan env)
-  case idin of
-    Nothing       → return "NULL"
-    Just (ID id0) → return id0
-    Just _        → return "ERR"
+  readID env
 
 -- | starts the lua thread
 hsStart ∷ Env → Lua.Lua ()

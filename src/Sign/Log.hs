@@ -10,7 +10,7 @@ import Control.Monad.IO.Class
 import Control.Monad.Morph
 import Control.Monad.Reader
 import System.Log.FastLogger
-import Data ( ID )
+import Data ( ID(..) )
 import Load.Data ( DynData(..), TextureMap(..), Tex(..) )
 import Prog.Data ( Env(..), ChanName(..), QueueName(..), QueueCmd(..)
                  , TVarName(..), TVarValue(..))
@@ -163,10 +163,10 @@ sendTimerState timer st = do
   liftIO $ writeQueue'' env TimeQueue $ QCTimeCmd $ TCState timer st
 
 -- | writes to the ID chan
-writeIDChan ∷ (MonadLog μ, MonadFail μ) ⇒ ID → μ ()
-writeIDChan id = do
+writeIDTVar ∷ (MonadLog μ, MonadFail μ) ⇒ ID → μ ()
+writeIDTVar id0 = do
   (Log _   env _   _   _) ← askLog
-  liftIO $ atomically $ writeChan (envIDChan env) id
+  liftIO $ writeTVar'' env IDTVar $ TVID id0
 
 -- | sends a capture to the input queue
 sendCapture ∷ (MonadLog μ, MonadFail μ) ⇒ Capture → μ ()

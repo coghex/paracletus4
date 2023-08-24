@@ -49,8 +49,6 @@ initEnv = do
   loadCh   ← newTChan
   inpCh    ← newTChan
   timeCh   ← newTChan
-  -- channel specifically for returning object IDs to lua
-  idCh     ← newTChan
   -- vert TVar keeps verticies in a cache so when we only
   -- recalculate if we explicitly ask for it
   vertsTV  ← atomically $ newTVar Nothing
@@ -62,10 +60,11 @@ initEnv = do
   fsTV     ← atomically $ newTVar Nothing
   -- we also need to keep track of the font hinting data
   fmTV     ← atomically $ newTVar Nothing
+  -- Tvar specifically for returning object IDs to lua
+  idTV     ← atomically $ newTVar Nothing
   let env = Env { envQueues = Queues queues4
                 , envChans  = Chans chans4
-                , envIDChan = idCh
-                , envTVars  = TVars tvars4
+                , envTVars  = TVars tvars5
                 , envLuaSt  = luaSt }
       queues0 = Map.empty
       queues1 = Map.insert EventQueue eventQ  queues0
@@ -82,6 +81,7 @@ initEnv = do
       tvars2  = Map.insert DynsTVar     dynsTV  tvars1
       tvars3  = Map.insert FontSizeTVar fsTV    tvars2
       tvars4  = Map.insert FontMapTVar  fmTV    tvars3
+      tvars5  = Map.insert IDTVar       idTV    tvars4
   -- and env that can be accessed transactionally
   envChan ← atomically $ newTVar env
   -- we return both so that initState doesnt need to load the TVar

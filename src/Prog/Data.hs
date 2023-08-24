@@ -32,7 +32,6 @@ data ReloadState = RSReload | RSRecreate | RSNULL deriving (Show, Eq)
 -- | transactional memory and inter thread communication
 data Env = Env { envQueues ∷ Queues
                , envChans  ∷ Chans
-               , envIDChan ∷ TChan ID
                , envTVars  ∷ TVars
                , envLuaSt  ∷ Lua.State }
 
@@ -50,8 +49,9 @@ data ChanName  = LuaChan | InputChan | LoadChan | TimeChan | IDChan
 -- | dynamic collection of tvars
 data TVars     = TVars { tm ∷ Map TVarName (TVar (Maybe TVarValue)) }
 data TVarValue = TVInt Int | TVString String | TVVerts Verts | TVDyns [DynData]
-               | TVFontMap [TTFData] deriving (Show, Eq)
-data TVarName  = WindowTVar | VertsTVar | DynsTVar | FontSizeTVar | FontMapTVar
+               | TVFontMap [TTFData] | TVID ID deriving (Show, Eq)
+data TVarName  = WindowTVar | VertsTVar | DynsTVar
+               | FontSizeTVar | FontMapTVar | IDTVar
                | CustomTVar Int deriving (Show, Eq, Ord)
 
 -- | state holds mutable data, and the
