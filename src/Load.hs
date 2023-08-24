@@ -82,12 +82,19 @@ processCommands ds = do
           DSSReload → do
             fontsize ← readFontSize
             ttfdata ← readFontMapM
+            olddyns ← readTVar DynsTVar
             let tiles = shell ⧺ wins
                 wins  = findTiles fontsize ttfdata (dsCurr ds') (dsWins ds')
                 dyns  = generateDynData tiles
                 shell = shTiles fontsize ttfdata (dsShell ds')
             modifyTVar DynsTVar $ TVDyns dyns
-            processCommands ds' { dsStatus = DSSNULL }
+            --log' (LogDebug 1) $ "[Load] regenerating dyns: "
+            --                  ⧺ show (length tiles)
+            if length olddyns ≠ length dyns then do
+              let verts = Verts $ calcVertices $ reverse tiles
+              modifyTVar VertsTVar $ TVVerts verts
+              processCommands ds' { dsStatus = DSSNULL }
+            else processCommands ds' { dsStatus = DSSNULL }
           DSSRecreate → do
             fontsize ← readFontSize
             ttfdata ← readFontMapM
@@ -97,11 +104,11 @@ processCommands ds = do
                 wins  = findTiles fontsize ttfdata (dsCurr ds') (dsWins ds')
                 dyns  = generateDynData tiles
                 shell = shTiles fontsize ttfdata (dsShell ds')
-            log' (LogDebug 1) $ "[Load] regenerating verts and dyns: "
-                              ⧺ show (length tiles)
             modifyTVar VertsTVar $ TVVerts verts
             modifyTVar DynsTVar $ TVDyns dyns
             sendSys SysRecreate
+            --log' (LogDebug 1) $ "[Load] regenerating verts and dyns: "
+            --                  ⧺ show (length tiles)
             processCommands ds' { dsStatus = DSSNULL }
           DSSNULL   → processCommands ds'
         LoadResultError str     → do

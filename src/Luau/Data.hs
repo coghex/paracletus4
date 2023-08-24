@@ -5,7 +5,9 @@
 module Luau.Data where
 -- data for lua interpreter
 import Data.Aeson
+import qualified Data.Map as M
 import GHC.Generics
+import Data ( ID(..) )
 import qualified Vulk.GLFW as GLFW
 
 data InputJson   = InputJson   { keySettings ∷ KeySettings } deriving (Generic, Show)
@@ -38,3 +40,7 @@ data ShellCmd = ShToggle
               | ShKey GLFW.Key GLFW.ModifierKeys
               | ShEcho String | ShHistory | ShClear | ShExit
               | ShNULL deriving (Show, Eq)
+
+-- | collection of user made variables
+newtype UserData = UserData (M.Map ID UserVar) deriving (Show, Eq)
+data UserVar = UVInt | UVBool deriving (Show, Eq)

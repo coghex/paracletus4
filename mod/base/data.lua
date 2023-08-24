@@ -1,0 +1,16 @@
+-- function newBool (b)
+--     id = rawNewBool(b)
+--     return id
+-- end
+-- function getBool (b)
+--     v2 = rawGetBool(b)
+--     return v2
+-- end
+-- function setBool (b,v)
+--     rawSetBool(b,v)
+-- end
+--
+-- function newVar (b)
+--     id = rawNewVar(b)
+--     return id
+-- end

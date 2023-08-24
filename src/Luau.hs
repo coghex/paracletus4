@@ -10,11 +10,13 @@ import Data.List (sort)
 import Data.Maybe ( fromMaybe )
 import Data.String ( fromString )
 import Data.Time.Clock (diffUTCTime, getCurrentTime)
+import qualified Data.Map as Map
 import qualified HsLua as Lua
 import Control.Monad.Catch ( catch )
 import System.Directory (getDirectoryContents)
 import System.FilePath (combine)
 import Luau.Command
+import Luau.Data ( UserData(..) )
 import Prog.Data ( Env(..), ChanName(..), QueueName(..), QueueCmd(..) )
 import Sign.Data
     ( Event(EventLog, EventSys),
@@ -51,6 +53,7 @@ luauThread env = do
         Lua.registerHaskellFunction (fromString "rawNewWindow") (hsNewWindow    env)
         Lua.registerHaskellFunction (fromString "rawSelectWin") (hsSelectWin    env)
         Lua.registerHaskellFunction (fromString "rawLoadFont")  (hsLoadFont     env)
+        Lua.registerHaskellFunction (fromString "rawStart")     (hsStart        env)
         Lua.registerHaskellFunction
           (fromString "rawRegisterInputKeys")          (hsRegisterInputKeys  env)
         Lua.registerHaskellFunction
@@ -60,17 +63,19 @@ luauThread env = do
         Lua.openlibs
         _ ← Lua.dofile $ Just "mod/base/game.lua"
         Lua.invoke (fromString "initLuau") modFiles ∷ Lua.LuaE Lua.Exception Int
-      luauLoop TStart env modFiles
+      luauLoop TPause env initUD modFiles
 
--- | the loop runs lua commands every loop
-luauLoop ∷ TState → Env → String → IO ()
-luauLoop TPause env modFiles = do
-  log' env (LogDebug 1) "starting luau loop..."
+-- | the loop runs lua commands every loop and maintains a state
+luauLoop ∷ TState → Env → UserData → String → IO ()
+luauLoop TPause env ud modFiles = do
   tsNew ← readChan' env LuaChan
   case tsNew of
-    Nothing → log' env LogError "there is no lua chan"
-    Just c0 → luauLoop c0 env modFiles
-luauLoop TStart env modFiles = do
+    Nothing → do
+      threadDelay 1000
+      luauLoop TPause env ud modFiles
+      --log' env LogError "there is no lua chan"
+    Just c0 → luauLoop c0 env ud modFiles
+luauLoop TStart env ud modFiles = do
   start ← getCurrentTime
   tsMby ← readChan' env LuaChan
   let tsNew = fromMaybe TStart tsMby
@@ -85,11 +90,13 @@ luauLoop TStart env modFiles = do
       delay = n*1000 - usecs
       n     = 1000
   if delay > 0 then threadDelay delay else return ()
-  luauLoop tsNew env modFiles
-luauLoop TStop _   _      = return ()
-luauLoop TNULL _   _      = return ()
+  luauLoop tsNew env ud modFiles
+luauLoop TStop  _   _  _        = return ()
+luauLoop TNULL  _   _  _        = return ()
 
-
+-- initializes empty user data
+initUD ∷ UserData
+initUD = UserData Map.empty
 
 -- | simple utility function that may or may not work on windows
 findModFiles ∷ String → IO String

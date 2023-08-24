@@ -12,9 +12,8 @@ function initMod ()
     initTextures ()
     m = initMenu ()
     game.selectWin (m)
-    os.execute("sleep " .. tonumber(0.5))
-    game.recreate()
+    game.start()
 end
 function runMod ()
-    --game.logDebug("default mod: runMod()")
+    game.logDebug("default mod: runMod()")
 end

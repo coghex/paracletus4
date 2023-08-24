@@ -9,13 +9,11 @@ import Data.Maybe ( fromMaybe )
 import Numeric ( readHex )
 import Data (ID(..))
 import Text.Read ( readMaybe )
-import Prog.Data ( Env(..), QueueName(..), QueueCmd(..) )
+import Prog.Data ( Env(..), QueueName(..), QueueCmd(..), ChanName(..) )
 import Sign.Data
-    ( Event(..), LogLevel(..), InputStateChange(..), LoadCmd(..), LoadChunk(..)
-    , SysAction(SysReload, SysExit, SysRecreate), InpCmd(..), LoadStateChange(..) )
 import Sign.Queue ( writeQueue, readChan, tryReadChan )
 import Sign.Var ( atomically, readTVar )
-import Sign.Util ( writeQueue'' )
+import Sign.Util ( writeQueue'', writeChan'' )
 import Load.Data ( Tile(..), TilePos(..), TileTex(..), Text(..) )
 import Luau.Util ( vtail, vhead, luaEvent )
 import Luau.Data ( ShellCmd(..) )
@@ -101,6 +99,11 @@ hsNewText env x y w h win text = do
     Nothing       → return "NULL"
     Just (ID id0) → return id0
     Just _        → return "ERR"
+
+-- | starts the lua thread
+hsStart ∷ Env → Lua.Lua ()
+hsStart env = do
+  Lua.liftIO $ writeChan'' env LuaChan TStart
 
 -- | reloads the command buffers of the engine
 hsReload ∷ Env → Lua.Lua ()

@@ -85,6 +85,12 @@ writeChan' env name state = case findChan env name of
   Nothing → log'' LogWarn $ "no channel" ⧺ show name
   Just c0 → liftIO $ atomically $ writeChan c0 state
 
+-- | writes a chan in io state
+writeChan'' ∷ Env → ChanName → TState → IO ()
+writeChan'' env name state = case findChan env name of
+  Nothing → log' env LogWarn $ "no channel" ⧺ show name
+  Just c0 → liftIO $ atomically $ writeChan c0 state
+
 -- | finds a specified TVar
 findTVar ∷ Env → TVarName → Maybe (TVar (Maybe TVarValue))
 findTVar env tvar = M.lookup tvar tvars

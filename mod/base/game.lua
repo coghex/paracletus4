@@ -19,6 +19,9 @@ end
 
 game = game or {}
 
+function game.start()
+    rawStart()
+end
 function game.logDebug(str)
     logDebug(1,str)
 end

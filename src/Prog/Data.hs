@@ -67,6 +67,8 @@ data State = State { stStatus   ∷ ProgExcept
                    -- | set this variable and the swapchain will reload
                    --   on the next loop iteration
                    , stReload   ∷ !ReloadState
+                   -- | determines if we have loaded
+                   , stLoaded   ∷ !Bool
                    -- | state of user settings
                    , stSettings ∷ !Settings
                    -- | the list of textures by fp loaded from outside

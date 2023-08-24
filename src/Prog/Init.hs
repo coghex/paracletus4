@@ -105,6 +105,7 @@ initState _   = do
                              , stLogFunc   = lf
                              , stWindow    = Nothing
                              , stReload    = RSNULL
+                             , stLoaded    = False
                              , stSettings  = settings
                              , stTextures  = []
                              , stFont      = Nothing
