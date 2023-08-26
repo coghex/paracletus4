@@ -164,13 +164,16 @@ processCommand ds cmd = case cmd of
         return LoadResultSuccess
   LoadTest → do
         --sendTest
+        log' LogInfo $ "[Load] windows: " ⧺ show (dsWins ds)
         return $ LoadResultDrawState $ ds { dsStatus = DSSRecreate }
   LoadID → do
-    log' LogInfo "creating id..."
+    log' LogInfo "[Load] creating id..."
     ID id0 ← liftIO newID
     writeIDTVar $ ID id0
     return LoadResultSuccess
-  LoadNew lc → newChunk ds lc
+  LoadNew lc → do
+    log' LogInfo $ "[Load] loading new: " ⧺ show lc
+    newChunk ds lc
   LoadShell shcmd → processShellCommand ds shcmd
   LoadTimer timer → processTimer ds timer
   LoadReload → do

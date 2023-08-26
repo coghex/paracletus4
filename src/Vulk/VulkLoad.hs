@@ -44,7 +44,7 @@ loadVulkanTextures (GQData pdev dev cmdPool cmdQueue) fps = do
   (texViews,texSamps) ← case fontPath of
     Nothing → return (fst (unzip modTexViews), texSamplersMod)
     Just fp → do
-      logDebug $ "loading font " ⧺ fp
+      logDebug $ "[Vulk] loading font " ⧺ fp
       -- font texs are generated from ttf
       fontData ← createFontImageViews pdev dev cmdPool cmdQueue fp 16
       let (fontTexs, fontMetrics) = unzip fontData

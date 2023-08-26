@@ -26,9 +26,9 @@ createVulkanInstance progName engineName extensions layers'
   = allocResource destroyVulkanInstance $ do
     extStrings ← liftIO $ mapM peekCString extensions
     logDebug $ unlines
-      $ "enabling instance extensions: " : map (" " ⧺) extStrings
+      $ "[Vulk] enabling instance extensions: " : map (" " ⧺) extStrings
     logDebug $ unlines
-      $ "enabling instance layers: " : map (" " ⧺) layers
+      $ "[Vulk] enabling instance layers: " : map (" " ⧺) layers
     withVkPtr iCreateInfo $ \iciPtr → allocaPeek
       $ runVk ∘ vkCreateInstance iciPtr VK_NULL
   where layers = layers' ⧺ [vkLayerValidation | isDev]
@@ -54,9 +54,9 @@ createVulkanInstance progName engineName extensions layers'
 destroyVulkanInstance ∷ VkInstance → Prog ε σ ()
 destroyVulkanInstance vkInstance = liftIO
   (vkDestroyInstance vkInstance VK_NULL) ≫ inDev
-    (logDebug "destroyed vkInstance")
+    (logDebug "[Vulk] destroyed vkInstance")
 -- | vulkan specific glfw function
 createGLFWVulkanInstance ∷ String → Prog ε σ VkInstance
 createGLFWVulkanInstance progName = do
   glfwReqExts ← liftIO GLFW.getRequiredInstanceExtensions
-  createVulkanInstance progName "opentowns" glfwReqExts []
+  createVulkanInstance progName "paracletus" glfwReqExts []

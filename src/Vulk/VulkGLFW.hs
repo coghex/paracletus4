@@ -43,26 +43,26 @@ initGLFWWindow w h n windowSizeChanged = do
   env ← ask
   eventQ ← findQueue' env EventQueue
   allocResource
-    (\() → liftIO GLFW.terminate ≫ logInfo "terminated glfw")
+    (\() → liftIO GLFW.terminate ≫ logInfo "[GLFW] terminated glfw")
     (liftIO GLFW.init ⌦ flip unless
-      (logExcept GLFWError ExVulk "failed to init glfw") )
+      (logExcept GLFWError ExVulk "[GLFW] failed to init glfw") )
   -- this one we set before we create the window
   liftIO $ GLFW.setErrorCallback $ Just $ errorCallback eventQ
-  liftIO GLFW.getVersionString ⌦ mapM_ (logInfo ∘ ("glfw version: " ⧺))
+  liftIO GLFW.getVersionString ⌦ mapM_ (logDebug ∘ ("[GLFW] glfw version: " ⧺))
   liftIO GLFW.vulkanSupported ⌦ flip unless
-    (logExcept GLFWError ExVulk "glfw does not support vulkan")
+    (logExcept GLFWError ExVulk "[GLFW] glfw does not support vulkan")
   liftIO ∘ GLFW.windowHint $ WindowHint'ClientAPI ClientAPI'NoAPI
   liftIO ∘ GLFW.windowHint $ WindowHint'Resizable True
   allocResource
     ( \window → do
         liftIO (GLFW.destroyWindow window)
-        logDebug "closed glfw window"
+        logDebug "[GLFW] closed glfw window"
     ) $ do
     mw ← liftIO $ GLFW.createWindow w h n Nothing Nothing
     case mw of
-      Nothing → logExcept GLFWError ExVulk "failed to init glfw"
+      Nothing → logExcept GLFWError ExVulk "[GLFW] failed to init glfw"
       Just window → do
-        logDebug "initialized glfw window"
+        logDebug "[GLFW] initialized glfw window"
         liftIO $ GLFW.setKeyCallback         window
           $ Just $ keyCallback         eventQ
         liftIO $ GLFW.setMouseButtonCallback window
@@ -173,17 +173,17 @@ makeFullscreen ∷ Prog ε σ ()
 makeFullscreen = do
   win ← gets stWindow
   env ← ask
-  logInfo "making fullscreen"
+  logInfo "[GLFW] making fullscreen"
   case win of
-    Nothing → logError "no glfw window present"
+    Nothing → logError "[GLFW] no glfw window present"
     Just w0 → do
       m' ← liftIO GLFW.getPrimaryMonitor
       case m' of
-        Nothing → logError "no primary monitor present"
+        Nothing → logError "[GLFW] no primary monitor present"
         Just m0 → do
           vm' ← liftIO $ GLFW.getVideoMode m0
           case vm' of
-            Nothing → logError "no video mode present"
+            Nothing → logError "[GLFW] no video mode present"
             Just _  →  do
               (_,_,w,h) ← liftIO $ GLFW.getMonitorWorkarea m0
               liftIO $ GLFW.setWindowSize w0 w h
@@ -197,9 +197,9 @@ makeWindowed ∷ Int → Int → Int → Int → Prog ε σ ()
 makeWindowed w h x y = do
   win ← gets stWindow
   env ← ask
-  logInfo "making windowed"
+  logInfo "[GLFW] making windowed"
   case win of
-    Nothing → logError "no glfw window present"
+    Nothing → logError "[GLFW] no glfw window present"
     Just w0 → do
       liftIO $ GLFW.setWindowed w0 w h x y
       --liftIO $ atomically $ writeQueue (envLoadQ env)

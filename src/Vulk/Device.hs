@@ -65,22 +65,31 @@ selectPresentationFamily dev surf (x@(i,qfp):xs)
       else selectPresentationFamily dev surf xs
 -- | returns the first suitable physical device
 pickPhysicalDevice ∷ VkInstance → Maybe VkSurfaceKHR
-  → Prog ε σ (Maybe SwapchainSupportDetails, VkPhysicalDevice)
+  → Prog ε σ (Maybe SwapchainSupportDetails, VkPhysicalDevice, String)
 pickPhysicalDevice vkInstance mVkSurf = do
   devs ← asListVk $ \x → runVk ∘ vkEnumeratePhysicalDevices vkInstance x
   when (null devs) $ logExcept VulkError ExVulk "zero device count"
-  logDebug $ "found " ⧺ show (length devs) ⧺ " devices"
-  --selectFirstSuitable devs
+  logDebug $ "[Vulk] found " ⧺ show (length devs) ⧺ " devices"
   selectDiscreteFirst devs devs
   where selectDiscreteFirst devs [] = selectFirstSuitable devs
         selectDiscreteFirst devs (x:xs) = do
           (mscsd, indeed) ← isDeviceDiscrete mVkSurf x
-          if indeed then pure (mscsd, x) else selectDiscreteFirst devs xs
+          if indeed then do
+            props ← allocaPeek
+              $ liftIO ∘ vkGetPhysicalDeviceProperties x
+            let name = getStringField @"deviceName" props
+            pure (mscsd, x, name)
+          else selectDiscreteFirst devs xs
         selectFirstSuitable [] = logExcept VulkError ExVulk
-                                   "no suitable devices..."
+                                   "[Vulk] no suitable devices..."
         selectFirstSuitable (x:xs) = do
           (mscsd, indeed) ← isDeviceSuitable mVkSurf x
-          if indeed then pure (mscsd, x) else selectFirstSuitable xs
+          if indeed then do
+            props ← allocaPeek
+              $ liftIO ∘ vkGetPhysicalDeviceProperties x
+            let name = getStringField @"deviceName" props
+            pure (mscsd, x, name)
+          else selectFirstSuitable xs
 isDeviceDiscrete ∷ Maybe VkSurfaceKHR → VkPhysicalDevice
   → Prog ε σ (Maybe SwapchainSupportDetails, Bool)
 isDeviceDiscrete mVkSurf pdev = do

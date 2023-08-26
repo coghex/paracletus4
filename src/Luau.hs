@@ -34,10 +34,10 @@ luauThread ∷ Env → IO ()
 luauThread env = do
     modFiles ← findModFiles "mod/game/"
     if modFiles ≡ [] then do
-      log' env (LogDebug 1) "no mod files in mod/game/"
+      log' env (LogDebug 1) "[Luau] no mod files in mod/game/"
     else do
-      log' env (LogDebug 1) "initializing Luau with mods:"
-      log' env (LogDebug 1) modFiles
+      log' env (LogDebug 1) "[Luau] initializing Luau with mods:"
+      log' env (LogDebug 1) $ "[Luau]    " ⧺ modFiles
       let ls = envLuaSt env
       _ ← Lua.runWith ls $ do
         Lua.registerHaskellFunction (fromString "rawExit")      (hsExit         env)

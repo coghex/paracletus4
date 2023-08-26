@@ -90,10 +90,6 @@ import Util ( newID )
 runVulk ∷ HasCallStack ⇒ Prog ε σ ()
 runVulk = do
     logDebug "beginning paracletus..."
-    id1 ← liftIO newID
-    logDebug $ show id1
-    id2 ← liftIO newID
-    logDebug $ show id2
     -- windowsizechanged is completely seperate from all other data
     windowSizeChanged ← liftIO $ atomically $ newTVar True
     -- window loads in at 800 600 by default
@@ -106,18 +102,19 @@ runVulk = do
     vulkanInstance ← createGLFWVulkanInstance "paracletus-instance"
     vulkanSurface ← createSurface vulkanInstance window
     -- forks GLFW as parent
-    logDebug "forking glfw..."
+    logDebug "[Vulk] forking glfw..."
     glfwWaitEventsMeanwhile $ do
-      logDebug "selecting graphics device..."
+      logDebug "[Vulk] selecting graphics device..."
       -- picks the first suitable device, prioritizing discrete gpu
-      (_, pdev)    ← pickPhysicalDevice vulkanInstance
-                       (Just vulkanSurface)
+      (_, pdev,name)    ← pickPhysicalDevice vulkanInstance
+                            (Just vulkanSurface)
+      logDebug $ "[Vulk] using device: " ⧺ name
       msaaSamples  ← getMaxUsableSampleCount pdev
       (dev,queues) ← createGraphicsDevice pdev vulkanSurface
       -- shader compilation happens at compile time since the
       -- shaders are so simple, this template haskell function
       -- simply inserts that code into vulkan memory
-      logDebug "compiling shaders..."
+      logDebug "[Vulk] compiling shaders..."
       (shaderVert,shaderFrag) ← makeShader dev
       -- more vulkan specifics
       --logDebug "creating semaphores and fences..."
@@ -130,10 +127,10 @@ runVulk = do
       imgIndexPtr ← mallocRes
       let gqdata = GQData pdev dev commandPool (graphicsQueue queues)
       texData ← loadVulkanTextures gqdata ["dat/tex/alpha.png"
-                                          ,"dat/tex/grayscale.png"
-                                          ,"dat/tex/texture.jpg"]
+                                          ,"dat/tex/texture.jpg"
+                                          ,"dat/tex/blankpage.jpg"]
       -- child threads go here
-      logDebug "forking lua interpreter..."
+      logDebug "[Vulk] forking lua interpreter..."
       env ← ask
       writeChan' env InputChan TStart
       writeChan' env LoadChan TStart
@@ -151,14 +148,14 @@ runVulk = do
       loop $ do
           firstTick ← liftIO getCurTick
           scsd ← querySwapchainSupport pdev vulkanSurface
-          logDebug "loading swapchain..."
+          logDebug "[Vulk] loading swapchain..."
           beforeSwapchainCreation
           recr ← gets stReload
           texs ← gets stTextures
           case recr of
             RSRecreate → do
               -- load textures
-              logDebug $ "recreating vulkan with textures: " ⧺ show texs
+              logDebug $ "[Vulk] recreating vulkan with textures: " ⧺ show texs
               -- TODO: figure out why this needs to be backwards
               newTexData ← loadVulkanTextures gqdata $ reverse texs
               modify $ \s → s { stReload = RSNULL
@@ -254,7 +251,7 @@ vulkLoop (VulkanLoopData (GQData pdev dev commandPool _) queues scsd0
     currentSec ← liftIO $ atomically $ newTVar @Int 0
     -- loop reloads commandBuffer, less of a stutter
     shouldExit ← loadLoop window $ do
-      logDebug "generating command buffers..."
+      logDebug "[Vulk] generating command buffers..."
       cmdBP ← genCommandBuffs dev pdev commandPool queues graphicsPipeline
                 renderPass texData swapInfo framebuffers descriptorSets
       modify $ \s → s { stReload = RSNULL }
@@ -296,15 +293,15 @@ vulkLoop (VulkanLoopData (GQData pdev dev commandPool _) queues scsd0
             _ ← do
               --writeQueue env LoadQueue
               --  $ LoadCmdWindowSize winSize
-              logDebug  "vulkan window changing size"
+              logDebug  "[Vulk] vulkan window changing size"
             return True
           else drawFrame rdata `catchError`
             (\err → if testEx err VK_ERROR_OUT_OF_DATE_KHR
               then do
-                _ ← logDebug "vulkan khr out of date"
+                _ ← logDebug "[Vulk] vulkan khr out of date"
                 modify $ \s → s { stReload = RSRecreate }
                 return True
-              else logExcept VulkError ExVulk "unknown drawFrame error" )
+              else logExcept VulkError ExVulk "[Vulk] unknown drawFrame error" )
         -- some events must be processed in the parent thread
         processEvents
         -- simple fps counter
@@ -365,17 +362,10 @@ genCommandBuffs dev pdev commandPool queues graphicsPipeline renderPass
         (w',h') ← case win of
           Just w0 → liftIO $ GLFW.getWindowSize w0
           Nothing → return (800,600)
-        logDebug "generating verticies..."
+        logDebug "[Vulk] generating verticies..."
         let res   = calcVertices $ emptyTiles $ length tiles --tiles
             (w,h) = (fromIntegral w'/64.0,fromIntegral h'/64.0)
-            tiles = [Tile IDNULL (TilePos (0,0) (1,1))
-                          (TileTex (0,0) (1,1) 0)
-                    ,Tile IDNULL (TilePos (1,1) (1,1))
-                          (TileTex (0,0) (1,1) 1)
-                    ,Tile IDNULL (TilePos (2,2) (1,1))
-                          (TileTex (0,0) (1,1) 2)
-                    ,Tile IDNULL (TilePos (3,3) (1,1))
-                          (TileTex (0,0) (1,1) 3)]
+            tiles = []
             dyns  = generateDynData tiles
         modifyTVar env DynsTVar $ TVDyns dyns
         modifyTVar env VertsTVar $ TVVerts $ Verts res

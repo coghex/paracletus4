@@ -13,10 +13,14 @@ function initMod ()
     initTextures ()
     ls = initLoadScreen ()
     game.selectWin (ls)
-    m = initMenu ()
-    game.selectWin (m)
     game.start()
+    loaded = 0
 end
 function runMod ()
-    game.logDebug("default mod: runMod()")
+    if loaded < 2 then
+        m = initMenu()
+        game.selectWin (m)
+        loaded = loaded + 1
+    end
+    --game.logDebug("default mod: runMod()")
 end

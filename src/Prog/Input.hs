@@ -85,7 +85,7 @@ processInput env is (InpEvent (InputMouseButton win mb mbs mk)) = do
   processMouseButton env win mb mbs mk
   return EventResultSuccess
 processInput env is (InpState (ISCRegisterKeys path))           = do
-  log' env (LogDebug 1) "registering keys..."
+  log' env (LogDebug 1) "[Input] registering keys..."
   keyM ← readKeySettings env path
   let is' = is { keyMap = keyM }
   return $ EventResultInputState is'
@@ -116,7 +116,7 @@ processKey env key ks mk is = do
   --log' env (LogDebug 1) $ "processing key " ⧺ show key ⧺ ", function: " ⧺ show keyFunc
   when (ks ≡ GLFW.KeyState'Pressed) $ case keyFunc of
       KFEscape → do
-        log' env (LogDebug 1) "sending quit command"
+        --log' env (LogDebug 1) "sending quit command"
         writeQueue'' env EventQueue $ QCEvent $ EventSys SysExit
       KFTest → do
         if keyCap is ≡ CaptureShell then
