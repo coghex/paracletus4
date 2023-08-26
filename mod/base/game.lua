@@ -55,3 +55,6 @@ end
 function game.initShell()
     rawInitShell()
 end
+function game.sleep(n)
+  os.execute("sleep " .. tonumber(n))
+end

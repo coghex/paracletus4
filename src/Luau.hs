@@ -74,7 +74,9 @@ luauLoop TPause env ud modFiles = do
       threadDelay 1000
       luauLoop TPause env ud modFiles
       --log' env LogError "there is no lua chan"
-    Just c0 → luauLoop c0 env ud modFiles
+    Just c0 → do
+      log' env (LogDebug 1) "[Luau] starting lua run threads"
+      luauLoop c0 env ud modFiles
 luauLoop TStart env ud modFiles = do
   start ← getCurrentTime
   tsMby ← readChan' env LuaChan

@@ -13,7 +13,7 @@ import Prog.Data
 import Sign.Data
 import Sign.Queue ( writeQueue, readChan, tryReadChan )
 import Sign.Var ( atomically, readTVar )
-import Sign.Util ( writeQueue'', writeChan'', readTVar'' )
+import Sign.Util ( writeQueue'', writeChan'', readTVar'', clearTVar )
 import Load.Data ( Tile(..), TilePos(..), TileTex(..), Text(..) )
 import Luau.Util ( vtail, vhead, luaEvent )
 import Luau.Data ( ShellCmd(..) )
@@ -51,8 +51,13 @@ hsRegisterTextureMap env str = Lua.liftIO $ writeQueue'' env LoadQueue
 -- | creates a new window
 hsNewWindow ∷ Env → String → Lua.Lua String
 hsNewWindow env name = do
+  clearID env
   Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew $ LCWindow name
   readID env
+
+-- | clears the IDChan
+clearID ∷ Env → Lua.Lua ()
+clearID env = Lua.liftIO $ clearTVar env IDTVar
 
 -- | reads an id from the load thread
 readID ∷ Env → Lua.Lua String
@@ -70,12 +75,14 @@ hsSelectWin env name = Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ Loa
 -- | returns a random ID
 hsNewID ∷ Env → Lua.Lua String
 hsNewID env = do
+  clearID env
   Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd LoadID
   readID env
 
 -- | creates a new tile
 hsNewTile ∷ Env → Double → Double → Double → Double → String → String → Lua.Lua String
 hsNewTile env x y w h win t = do
+  clearID env
   Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew $ LCTile win (TilePos (x,y) (w,h)) t
   readID env
 
@@ -83,12 +90,14 @@ hsNewTile env x y w h win t = do
 hsNewAtlas ∷ Env → Double → Double → Double → Double → String
            → String → Int → Int → Lua.Lua String
 hsNewAtlas env x y w h win t tx ty = do
+  clearID env
   Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew $ LCAtlas win (TilePos (x,y) (w,h)) t (tx,ty)
   readID env
 
 -- | create a new section of text
 hsNewText ∷ Env → Double → Double → Double → Double → String → String → Lua.Lua String
 hsNewText env x y w h win text = do
+  clearID env
   Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew
              $ LCText win $ Text IDNULL (x,y) (w,h) text
   readID env
@@ -96,6 +105,7 @@ hsNewText env x y w h win text = do
 -- | starts the lua thread
 hsStart ∷ Env → Lua.Lua ()
 hsStart env = do
+  luaEvent env $ EventLog LogInfo $ "[Luau] sending lua start command..."
   Lua.liftIO $ writeChan'' env LuaChan TStart
 
 -- | reloads the command buffers of the engine

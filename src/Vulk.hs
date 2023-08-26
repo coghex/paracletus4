@@ -127,8 +127,8 @@ runVulk = do
       imgIndexPtr ← mallocRes
       let gqdata = GQData pdev dev commandPool (graphicsQueue queues)
       texData ← loadVulkanTextures gqdata ["dat/tex/alpha.png"
-                                          ,"dat/tex/texture.jpg"
-                                          ,"dat/tex/blankpage.jpg"]
+                                          ,"dat/tex/alpha.png"
+                                          ,"dat/tex/alpha.png"]
       -- child threads go here
       logDebug "[Vulk] forking lua interpreter..."
       env ← ask
@@ -365,7 +365,7 @@ genCommandBuffs dev pdev commandPool queues graphicsPipeline renderPass
         logDebug "[Vulk] generating verticies..."
         let res   = calcVertices $ emptyTiles $ length tiles --tiles
             (w,h) = (fromIntegral w'/64.0,fromIntegral h'/64.0)
-            tiles = []
+            tiles = [Tile IDNULL (TilePos (0,0) (4,4)) (TileTex (0,0) (1,1) 1)]
             dyns  = generateDynData tiles
         modifyTVar env DynsTVar $ TVDyns dyns
         modifyTVar env VertsTVar $ TVVerts $ Verts res

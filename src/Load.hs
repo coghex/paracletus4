@@ -160,10 +160,11 @@ processCommand ds cmd = case cmd of
           return $ LoadResultDrawState $ ds { dsCurr = name
                                             , dsStatus = DSSRecreate }
       Nothing → do
-        log' LogWarn $ "[Load] window " ⧺ name ⧺ " doesnt exist"
+        log' LogWarn $ "[Load] window " ⧺ name ⧺ " doesnt exist in :" ⧺ show wins
         return LoadResultSuccess
   LoadTest → do
         --sendTest
+        log' LogInfo $ "[Load] curr window: " ⧺ show (dsCurr ds)
         log' LogInfo $ "[Load] windows: " ⧺ show (dsWins ds)
         return $ LoadResultDrawState $ ds { dsStatus = DSSRecreate }
   LoadID → do
@@ -172,7 +173,6 @@ processCommand ds cmd = case cmd of
     writeIDTVar $ ID id0
     return LoadResultSuccess
   LoadNew lc → do
-    log' LogInfo $ "[Load] loading new: " ⧺ show lc
     newChunk ds lc
   LoadShell shcmd → processShellCommand ds shcmd
   LoadTimer timer → processTimer ds timer
@@ -189,6 +189,7 @@ newChunk ds (LCWindow name)            = do
   writeIDTVar $ ID id0
   return $ LoadResultDrawState $ ds { dsWins = Map.insert id0 (Window name []) (dsWins ds) }
 newChunk ds (LCTile  win pos tex)      = do
+  log' LogInfo $ "[Load] loading new tile to win " ⧺ show win
   id0 ← liftIO newID
   let TextureMap tm = dsTexMap ds
       tile          = Tile id0 pos tt
