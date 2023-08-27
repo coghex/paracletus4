@@ -172,8 +172,8 @@ processCommand ds cmd = case cmd of
     ID id0 ← liftIO newID
     writeIDTVar $ ID id0
     return LoadResultSuccess
-  LoadNew lc → do
-    newChunk ds lc
+  LoadNew lc → newChunk ds lc
+  LoadGet gc → getData ds gc
   LoadShell shcmd → processShellCommand ds shcmd
   LoadTimer timer → processTimer ds timer
   LoadReload → do
@@ -181,6 +181,14 @@ processCommand ds cmd = case cmd of
   LoadRecreate → do
     return $ LoadResultDrawState ds { dsStatus = DSSRecreate }
   _ → return LoadResultSuccess
+
+-- | returns requested data on the user data TVar,
+--   not all data is in the draw state so we have
+--   to ask the main thread for some of it
+getData ∷ (MonadLog μ,MonadFail μ) ⇒ DrawState → GetCommand → LogT μ LoadResult
+getData _  GCWindow = do
+  sendGetCommand GCWindow
+  return LoadResultSuccess
 
 -- | adds a chunk of data to the drawstate
 newChunk ∷ (MonadLog μ,MonadFail μ) ⇒ DrawState → LoadChunk → LogT μ LoadResult

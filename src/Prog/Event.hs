@@ -8,13 +8,13 @@ import UPrelude
 import Control.Monad.State.Class (modify,gets)
 import System.Exit (exitSuccess)
 import qualified Vulk.GLFW as GLFW
+import Luau.Data ( UserVar(..) )
 import Prog
     ( MonadIO(liftIO), Prog, MonadReader(ask), MonadState(get) )
 import Prog.Data (Env(..), State(..), ReloadState(..), QueueCmd(..), QueueName(..),
                   TVarName(..), TVarValue(..))
-import Prog.Util ( logCommand )
+import Prog.Util ( logCommand, writeUDTVar )
 import Sign.Data
-    ( Event(..), LogLevel(..), SysAction(..), InpCmd(..), LoadCmd(..) )
 import Sign.Except ( ExType(ExVulk) )
 import Sign.Var ( atomically, modifyTVar' )
 import Sign.Util ( tryReadQueue', writeQueue', log'', writeTVar', readTVar')
@@ -49,6 +49,7 @@ processEvent (QCEvent event) = case event of
   EventTextures texmap → do
     modify $ \s → s { stTextures = texmap
                     , stReload   = RSRecreate }
+  EventGet gc → getData gc
   EventTest → do
     env ← ask
     dyns ← readTVar' env DynsTVar
@@ -58,3 +59,13 @@ processEvent (QCEvent event) = case event of
       Just _           → logCommand LogWarn "junk in dyns"
   _                   → log'' LogError $ "Unknown event: " ⧺ show event
 processEvent _               = return ()
+
+getData ∷ GetCommand → Prog ε σ ()
+getData GCWindow = do
+  win ← gets stWindow
+  case win of
+    Nothing → do
+      logCommand LogError "no window in state"
+      writeUDTVar UVNULL
+    Just w0 → writeUDTVar $ UVWindow w0
+getData gc       = logCommand LogWarn $ "unknown get command " ⧺ show gc

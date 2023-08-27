@@ -14,9 +14,7 @@ import Data ( ID(..) )
 import Load.Data ( DynData(..), TextureMap(..), Tex(..) )
 import Prog.Data ( Env(..), ChanName(..), QueueName(..), QueueCmd(..)
                  , TVarName(..), TVarValue(..))
-import Sign.Data ( LogLevel(..), Event(..), TState(..), LoadCmd(..), InpCmd(..)
-                 , SysAction(..), SettingsChange(..), Capture(..), TimerName(..)
-                 , InputStateChange(..) )
+import Sign.Data
 import Sign.Var ( atomically )
 import Sign.Queue ( readChan, tryReadChan, writeChan )
 import Sign.Util ( readChan', writeQueue'', tryReadQueue'', readTVar''
@@ -189,6 +187,11 @@ sendTest ∷ (MonadLog μ, MonadFail μ) ⇒ μ ()
 sendTest = do
   (Log _   env _   _   _) ← askLog
   liftIO $ writeQueue'' env EventQueue $ QCEvent $ EventTest
+-- | sends a get command to the main thread
+sendGetCommand ∷ (MonadLog μ, MonadFail μ) ⇒ GetCommand → μ ()
+sendGetCommand gc = do
+  (Log _   env _   _   _) ← askLog
+  liftIO $ writeQueue'' env EventQueue $ QCEvent $ EventGet gc
 -- | reads a tvar
 readTVar ∷ (MonadLog μ, MonadFail μ) ⇒ TVarName → μ (Maybe TVarValue)
 readTVar tvar = do

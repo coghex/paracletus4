@@ -16,7 +16,8 @@ import Sign.Var ( atomically, readTVar )
 import Sign.Util ( writeQueue'', writeChan'', readTVar'', clearTVar )
 import Load.Data ( Tile(..), TilePos(..), TileTex(..), Text(..) )
 import Luau.Util ( vtail, vhead, luaEvent )
-import Luau.Data ( ShellCmd(..) )
+import Luau.Data ( ShellCmd(..), UserVar(..) )
+import qualified Vulk.GLFW as GLFW
 
 -- | quits everything using glfw
 hsExit ∷ Env → Lua.Lua ()
@@ -59,6 +60,10 @@ hsNewWindow env name = do
 clearID ∷ Env → Lua.Lua ()
 clearID env = Lua.liftIO $ clearTVar env IDTVar
 
+-- | clears the UDChan
+clearUD ∷ Env → Lua.Lua ()
+clearUD env = Lua.liftIO $ clearTVar env UDTVar
+
 -- | reads an id from the load thread
 readID ∷ Env → Lua.Lua String
 readID env = do
@@ -67,6 +72,15 @@ readID env = do
     Nothing              → readID env
     Just (TVID (ID id0)) → return id0
     Just _               → return "ERR"
+
+-- | reads an id from the load thread
+readUD ∷ Env → Lua.Lua UserVar
+readUD env = do
+  udin ← Lua.liftIO $ readTVar'' env UDTVar
+  case udin of
+    Nothing              → readUD env
+    Just (TVUD var)      → return var
+    Just _               → return UVNULL
 
 -- | selects a new window
 hsSelectWin ∷ Env → String → Lua.Lua ()
@@ -125,3 +139,17 @@ hsRecreate env = do
 hsLoadFont ∷ Env → String → Lua.Lua ()
 hsLoadFont env fp = Lua.liftIO $ writeQueue'' env EventQueue
   $ QCEvent $ EventLoadFont fp
+
+-- | gets the current window size
+hsGetWindowSize ∷ Env → Lua.Lua [Int]
+hsGetWindowSize env = do
+  clearUD env
+  Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadGet GCWindow
+  var ← readUD env
+  case var of
+    UVWindow win → do
+      (x,y) ← Lua.liftIO $ GLFW.getWindowSize win
+      return [x,y]
+    _ → do
+      luaEvent env $ EventLog LogError $ "[Luau] thats not a window size"
+      return []

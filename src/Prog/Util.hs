@@ -23,15 +23,21 @@ import Sign ( checkStatus )
 import Sign.Data ( LogLevel(..), TState(..), InpCmd(..) )
 import Sign.Except ( ExType, Exceptable, ProgExcept(ProgExcept) )
 import Sign.Var ( atomically, newTVar, readTVar )
-import Sign.Util (log', readChan', tryReadQueue'')
+import Sign.Util (log', readChan', tryReadQueue'', modifyTVar)
+import Luau.Data ( UserVar(..) )
 import Prog
-    ( MonadIO(liftIO)
+    ( MonadIO(liftIO), ask
     , MonadError(throwError)
     , MonadState(get)
     , Prog(..)
     , Prog' )
-import Prog.Data ( LoopControl(ContinueLoop), State(stStartT), Env(..), ChanName(..)
-                 , QueueCmd(..), QueueName(..))
+import Prog.Data
+
+-- | writes data to the user data tvar
+writeUDTVar ∷ UserVar → Prog ε σ ()
+writeUDTVar ud = do
+  env ← ask
+  modifyTVar env UDTVar $ TVUD ud
 
 -- logging functions
 

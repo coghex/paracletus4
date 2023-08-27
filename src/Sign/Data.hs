@@ -34,6 +34,8 @@ data Event = EventError !GLFW.Error !String -- GLFW specific
            | EventLoadFont !String
            -- | changes to the settings
            | EventSettings !SettingsChange
+           -- | requests data from the main thread
+           | EventGet !GetCommand
            -- | lowest level actions go here
            | EventSys !SysAction
            | EventTest
@@ -42,13 +44,17 @@ data Event = EventError !GLFW.Error !String -- GLFW specific
 -- | possible commands load thread can handle
 data LoadCmd = LoadNew LoadChunk | LoadShell ShellCmd | LoadTimer TimerName
              | LoadState LoadStateChange | LoadReload | LoadRecreate | LoadTest
-             | LoadID
+             | LoadID | LoadGet GetCommand
              | LoadCmdNULL deriving (Show, Eq)
+-- | possible new data that can be made in the load thread
 data LoadChunk = LCWindow String
                | LCText String Text
                | LCTile String TilePos String
                | LCAtlas String TilePos String (Int,Int)
                | LCNULL deriving (Show, Eq)
+-- | possible data user can request from the load thread
+data GetCommand = GCWindow
+                | GCNULL deriving (Show,Eq)
 -- | possible events the input thread can handle
 data InpCmd  = InpEvent InputEvent | InpState InputStateChange
              | InpCmdNULL  deriving (Show, Eq)

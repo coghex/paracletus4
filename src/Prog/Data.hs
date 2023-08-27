@@ -7,6 +7,7 @@ import Prelude()
 import UPrelude
 import qualified Control.Monad.Logger.CallStack as Logger
 import Load.Data ( DynData )
+import Luau.Data ( UserVar )
 import Sign.Data ( TState, Event(..), LoadCmd(..), InpCmd(..) )
 import Sign.Except ( ProgExcept )
 import Sign.Queue ( Queue, TChan )
@@ -49,9 +50,9 @@ data ChanName  = LuaChan | InputChan | LoadChan | TimeChan | IDChan
 -- | dynamic collection of tvars
 data TVars     = TVars { tm ∷ Map TVarName (TVar (Maybe TVarValue)) }
 data TVarValue = TVInt Int | TVString String | TVVerts Verts | TVDyns [DynData]
-               | TVFontMap [TTFData] | TVID ID deriving (Show, Eq)
+               | TVFontMap [TTFData] | TVID ID | TVUD UserVar deriving (Show, Eq)
 data TVarName  = WindowTVar | VertsTVar | DynsTVar
-               | FontSizeTVar | FontMapTVar | IDTVar
+               | FontSizeTVar | FontMapTVar | IDTVar | UDTVar
                | CustomTVar Int deriving (Show, Eq, Ord)
 
 -- | state holds mutable data, and the

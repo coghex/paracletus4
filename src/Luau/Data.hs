@@ -43,4 +43,5 @@ data ShellCmd = ShToggle
 
 -- | collection of user made variables
 newtype UserData = UserData (M.Map ID UserVar) deriving (Show, Eq)
-data UserVar = UVInt | UVBool deriving (Show, Eq)
+data UserVar = UVInt Int | UVBool Bool | UVWindow GLFW.Window
+             | UVNULL deriving (Show, Eq)

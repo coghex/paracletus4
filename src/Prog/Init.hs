@@ -62,9 +62,11 @@ initEnv = do
   fmTV     ← atomically $ newTVar Nothing
   -- Tvar specifically for returning object IDs to lua
   idTV     ← atomically $ newTVar Nothing
+  -- Tvar specifically for returning data back to lua
+  udTV     ← atomically $ newTVar Nothing
   let env = Env { envQueues = Queues queues4
                 , envChans  = Chans chans4
-                , envTVars  = TVars tvars5
+                , envTVars  = TVars tvars6
                 , envLuaSt  = luaSt }
       queues0 = Map.empty
       queues1 = Map.insert EventQueue eventQ  queues0
@@ -82,6 +84,7 @@ initEnv = do
       tvars3  = Map.insert FontSizeTVar fsTV    tvars2
       tvars4  = Map.insert FontMapTVar  fmTV    tvars3
       tvars5  = Map.insert IDTVar       idTV    tvars4
+      tvars6  = Map.insert UDTVar       udTV    tvars5
   -- and env that can be accessed transactionally
   envChan ← atomically $ newTVar env
   -- we return both so that initState doesnt need to load the TVar
