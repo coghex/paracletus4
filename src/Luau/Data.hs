@@ -10,6 +10,7 @@ import GHC.Generics
 import Data ( ID(..) )
 import qualified Vulk.GLFW as GLFW
 
+-- | input settings as laid out in json file
 data InputJson   = InputJson   { keySettings ∷ KeySettings } deriving (Generic, Show)
 instance FromJSON InputJson where
   parseJSON = withObject "InputJson" $ \v → InputJson
@@ -19,7 +20,6 @@ instance ToJSON   InputJson where
     object ["keySettings" .= keySettings]
   toEncoding (InputJson keySettings) =
     pairs ("keySettings" .= keySettings)
-
 data KeySettings = KeySettings { keyEscape ∷ String
                                , keyTest   ∷ String
                                , keyShell  ∷ String }
