@@ -14,16 +14,13 @@ function initMod ()
     ls = initLoadScreen ()
     game.selectWin (ls)
     game.start()
-    loaded = 0
 end
 function runMod ()
-    if loaded < 1 then
-        loaded = loaded + 1
-    elseif loaded < 2 then
+    if loaded == 2 then
         m = initMenu()
         game.selectWin (m)
-        loaded = loaded + 1
         game.logDebug("loaded")
+        loaded = 3
     end
     game.logDebug("default mod: runMod()")
 end

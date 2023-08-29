@@ -1,5 +1,4 @@
-game = game or {}
-
+require "mod/base/game"
 function newTile(x,y,w,h,win,t)
     id = rawNewTile(x,y,w,h,win,t)
     game.recreate()

@@ -1,4 +1,3 @@
-require "mod/base/mods"
 -- this runs once at the beginning
 function initLuau (files)
     for file,k in string.gmatch(files, "([^;]*)") do
@@ -17,3 +16,7 @@ function runLuau (files)
     end
     return 0
 end
+
+game = game or {}
+
+loaded = 0

@@ -105,9 +105,13 @@ luauLoop TStart env ud modFiles = do
   let tsNew = fromMaybe TStart tsMby
       ls = envLuaSt env
   _ ← Lua.runWith ls $ do
-    Lua.openlibs
-    _ ← Lua.dofile $ Just "mod/base/game.lua"
-    Lua.invoke (fromString "runLuau") modFiles ∷ Lua.LuaE Lua.Exception Int
+      loaded ← Lua.getglobal (fromString "loaded") *> Lua.peek (-1)
+      if (loaded∷Int) < 2 then do
+        Lua.pushinteger 2
+        Lua.setglobal' (fromString "loaded")
+        return 1
+      else
+        Lua.invoke (fromString "runLuau") modFiles ∷ Lua.LuaE Lua.Exception Int
   end ← getCurrentTime
   let diff  = diffUTCTime end start
       usecs = floor (toRational diff * 1000000) ∷ Int
