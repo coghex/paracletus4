@@ -7,6 +7,7 @@ import Data ( PrintArg(..), KeyMap(..), KeyFunc(..) )
 import Load.Data ( Tile, DrawState, TilePos, DynData(..), TextureMap(..), Text(..) )
 import Luau.Data ( ShellCmd(..) )
 import Vulk.Data ( Verts(..) )
+import Vulk.Font ( Font(..) )
 import qualified Data.Map as Map
 import qualified Vulk.GLFW as GLFW
 
@@ -31,7 +32,7 @@ data Event = EventError !GLFW.Error !String -- GLFW specific
            -- | texture fp list from the load thread
            | EventTextures ![String]
            -- | fonts are loaded differently every other texture
-           | EventLoadFont !String
+           | EventLoadFont !Font
            -- | changes to the settings
            | EventSettings !SettingsChange
            -- | requests data from the main thread

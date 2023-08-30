@@ -8,6 +8,7 @@ import Data.List.Split (splitOn)
 import Data.Maybe ( fromMaybe )
 import Numeric ( readHex )
 import Data (ID(..))
+import Util (newID)
 import Text.Read ( readMaybe )
 import Prog.Data
 import Sign.Data
@@ -17,6 +18,7 @@ import Sign.Util ( writeQueue'', writeChan'', readTVar'', clearTVar )
 import Load.Data ( Tile(..), TilePos(..), TileTex(..), Text(..) )
 import Luau.Util ( vtail, vhead, luaEvent )
 import Luau.Data ( ShellCmd(..), UserVar(..) )
+import Vulk.Font ( Font(..) )
 import qualified Vulk.GLFW as GLFW
 
 -- | quits everything using glfw
@@ -109,11 +111,11 @@ hsNewAtlas env x y w h win t tx ty = do
   readID env
 
 -- | create a new section of text
-hsNewText ∷ Env → Double → Double → Double → Double → String → String → Lua.Lua String
-hsNewText env x y w h win text = do
+hsNewText ∷ Env → Double → Double → Double → Double → String → String → String → Lua.Lua String
+hsNewText env x y w h win font text = do
   clearID env
   Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew
-             $ LCText win $ Text IDNULL (x,y) (w,h) text
+             $ LCText win $ Text IDNULL (x,y) (w,h) (ID font) text
   readID env
 
 -- | starts the lua thread
@@ -136,9 +138,12 @@ hsRecreate env = do
 
 -- | sends the font string to the main thread where we send
 --   a font load cmd to the load thread
-hsLoadFont ∷ Env → String → Lua.Lua ()
-hsLoadFont env fp = Lua.liftIO $ writeQueue'' env EventQueue
-  $ QCEvent $ EventLoadFont fp
+hsLoadFont ∷ Env → String → Lua.Lua String
+hsLoadFont env fp = do
+  ID id0 ← Lua.liftIO newID
+  Lua.liftIO $ writeQueue'' env EventQueue
+    $ QCEvent $ EventLoadFont $ Font fp (ID id0) Nothing (-1)
+  return id0
 
 -- | gets the current window size
 hsGetWindowSize ∷ Env → Lua.Lua [Int]

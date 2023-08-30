@@ -20,7 +20,7 @@ import Sign.Queue ( readChan, tryReadChan, writeChan )
 import Sign.Util ( readChan', writeQueue'', tryReadQueue'', readTVar''
                  , writeTVar'', modifyTVar'' )
 import Time.Data ( TimeCmd(..) )
-import Vulk.Font (TTFData(..))
+import Vulk.Font (TTFData(..), Font(..))
 import Vulk.Data (Verts(..))
 import qualified Vulk.GLFW as GLFW
 
@@ -219,11 +219,20 @@ readFontSize = do
     Just _          → return 0
 
 -- | reads the current key layout
-readFontMapM ∷ (MonadLog μ, MonadFail μ) ⇒ LogT μ [TTFData]
+readFontMapM ∷ (MonadLog μ, MonadFail μ) ⇒ LogT μ [[TTFData]]
 readFontMapM = do
   (Log _   env _   _   _) ← askLog
   fontMap ← readTVar FontMapTVar
   case fontMap of
     Nothing              -> return []
     Just (TVFontMap tvv) -> return tvv
+
+-- | reads the font data
+readFonts ∷ (MonadLog μ, MonadFail μ) ⇒ LogT μ [Font]
+readFonts = do
+  (Log _   env _   _   _) ← askLog
+  fonts ← readTVar FontsTVar
+  case fonts of
+    Nothing           → return []
+    Just (TVFonts fs) → return fs
 

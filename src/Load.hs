@@ -25,7 +25,7 @@ import Sign.Log
 import Time ( processTimer )
 import Vulk.Calc ( calcVertices )
 import Vulk.Data ( Verts(Verts) )
-import Vulk.Font ( TTFData(..) )
+import Vulk.Font ( TTFData(..), Font(..), findFont, calcFontOffset )
 import Util ( newID )
 import Control.Concurrent (threadDelay)
 import Control.Monad.IO.Class ( liftIO, MonadIO(..) )
@@ -82,11 +82,12 @@ processCommands ds = do
           DSSReload → do
             fontsize ← readFontSize
             ttfdata ← readFontMapM
+            fonts ← readFonts
             olddyns ← readTVar DynsTVar
             let tiles = shell ⧺ wins
-                wins  = findTiles fontsize ttfdata (dsCurr ds') (dsWins ds')
+                wins  = findTiles fontsize fonts ttfdata (dsCurr ds') (dsWins ds')
                 dyns  = generateDynData tiles
-                shell = shTiles fontsize ttfdata (dsShell ds')
+                shell = shTiles fontsize (head ttfdata) (dsShell ds')
             modifyTVar DynsTVar $ TVDyns dyns
             --log' (LogDebug 1) $ "[Load] regenerating dyns: "
             --                  ⧺ show (length tiles)
@@ -98,12 +99,13 @@ processCommands ds = do
           DSSRecreate → do
             fontsize ← readFontSize
             ttfdata ← readFontMapM
+            fonts ← readFonts
             -- TODO: find why we need to reverse this
             let verts = Verts $ calcVertices $ reverse tiles
                 tiles = shell ⧺ wins
-                wins  = findTiles fontsize ttfdata (dsCurr ds') (dsWins ds')
+                wins  = findTiles fontsize fonts ttfdata (dsCurr ds') (dsWins ds')
                 dyns  = generateDynData tiles
-                shell = shTiles fontsize ttfdata (dsShell ds')
+                shell = shTiles fontsize (head ttfdata) (dsShell ds')
             modifyTVar VertsTVar $ TVVerts verts
             modifyTVar DynsTVar $ TVDyns dyns
             sendSys SysRecreate
@@ -120,23 +122,30 @@ processCommands ds = do
     Nothing → return ds
 
 -- | returns the tiles in the current window
-findTiles ∷ Int → [TTFData] → String → Map.Map String Window → [Tile]
-findTiles fontsize ttfdata win wins = case Map.lookup win wins of
+findTiles ∷ Int → [Font] → [[TTFData]] → String → Map.Map String Window → [Tile]
+findTiles fontsize fonts ttfdata win wins = case Map.lookup win wins of
   Nothing → []
-  Just w0 → generateWinTiles fontsize ttfdata (winElems w0)
+  Just w0 → generateWinTiles fontsize fonts ttfdata (winElems w0)
 -- | returns the tiles in a list of elements
-generateWinTiles ∷ Int → [TTFData] → [WinElem] → [Tile]
-generateWinTiles _        _       []       = []
-generateWinTiles fontsize ttfdata (we:wes) = tiles ⧺ generateWinTiles fontsize ttfdata wes
-  where tiles = generateElemTiles fontsize ttfdata we
-generateElemTiles ∷ Int → [TTFData] → WinElem → [Tile]
-generateElemTiles fontsize _       (WinElemTile tile) = [tile']
+generateWinTiles ∷ Int → [Font] → [[TTFData]] → [WinElem] → [Tile]
+generateWinTiles _        _     _       []       = []
+generateWinTiles fontsize fonts ttfdata (we:wes)
+  = tiles ⧺ generateWinTiles fontsize fonts ttfdata wes
+  where tiles = generateElemTiles fontsize fonts ttfdata we
+generateElemTiles ∷ Int → [Font] → [[TTFData]] → WinElem → [Tile]
+generateElemTiles fontsize fonts _       (WinElemTile tile) = [tile']
   where Tile id tp (TileTex tind tsiz t) = tile
         tile'                         = Tile id tp (TileTex tind tsiz (t + fontsize))
-generateElemTiles fontsize ttfdata (WinElemText text)
-  = genStringTiles fontsize ttfdata (fst pos) pos $ textString text
+generateElemTiles fontsize fonts ttfdata (WinElemText text)
+  = case findFont fonts id of
+    Nothing → []
+    Just font0 → genStringTiles fontsize' fd (fst pos) pos $ textString text
+                   where fd = ttfdata !! fontIndex font0
+                         fontsize' = calcFontOffset fonts $ fontIndex font0
     where pos = textPos text
-generateElemTiles _        _       WinElemNULL        = []
+          font = findFont fonts id
+          id  = textFont text 
+generateElemTiles _        _     _       WinElemNULL        = []
 
 -- | this is the case statement for processing load commands
 processCommand ∷ (MonadLog μ,MonadFail μ)

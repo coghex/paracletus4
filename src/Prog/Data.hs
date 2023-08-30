@@ -17,7 +17,7 @@ import Data ( FPS, ID )
 import Data.Time.Clock.System ( SystemTime )
 import Data.Map (Map)
 import Vulk.Data ( Verts )
-import Vulk.Font ( TTFData )
+import Vulk.Font ( TTFData, Font )
 import qualified HsLua as Lua
 import qualified Vulk.GLFW as GLFW
 
@@ -50,8 +50,9 @@ data ChanName  = LuaChan | InputChan | LoadChan | TimeChan | IDChan
 -- | dynamic collection of tvars
 data TVars     = TVars { tm ∷ Map TVarName (TVar (Maybe TVarValue)) }
 data TVarValue = TVInt Int | TVString String | TVVerts Verts | TVDyns [DynData]
-               | TVFontMap [TTFData] | TVID ID | TVUD UserVar deriving (Show, Eq)
-data TVarName  = WindowTVar | VertsTVar | DynsTVar
+               | TVFontMap [[TTFData]] | TVFonts [Font]
+               | TVID ID | TVUD UserVar deriving (Show, Eq)
+data TVarName  = WindowTVar | VertsTVar | DynsTVar | FontsTVar
                | FontSizeTVar | FontMapTVar | IDTVar | UDTVar
                | CustomTVar Int deriving (Show, Eq, Ord)
 
@@ -75,7 +76,7 @@ data State = State { stStatus   ∷ ProgExcept
                    -- | the list of textures by fp loaded from outside
                    , stTextures ∷ ![String]
                    -- | the optional font must be loaded seperately
-                   , stFont     ∷ !(Maybe String)
+                   , stFont     ∷ ![Font]
                    -- | variables for FPS calculation
                    , stStartT   ∷ !SystemTime
                    , stFPS      ∷ !FPS

@@ -55,6 +55,7 @@ data WinElem = WinElemTile Tile
 data Text = Text { textID     ∷ ID
                  , textPos    ∷ (Double,Double)
                  , textSize   ∷ (Double,Double)
+                 , textFont   ∷ ID
                  , textString ∷ String } deriving (Show, Eq)
 
 -- | status of the loading thread, allowing

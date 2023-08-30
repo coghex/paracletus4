@@ -44,8 +44,8 @@ processEvent (QCEvent event) = case event of
   EventSys sysEvent    → log'' LogWarn $ "Unknown sysaction: " ⧺ show event
   EventLog level str   → logCommand level str
   EventInput inpEvent  → writeQueue' InputQueue $ QCInpCmd $ InpEvent inpEvent
-  EventLoadFont fp → modify $ \s → s { stFont   = Just fp
-                                     , stReload = RSRecreate }
+  EventLoadFont font → modify $ \s → s { stFont   = stFont s ⧺ [font]
+                                       , stReload = RSRecreate }
   EventTextures texmap → do
     modify $ \s → s { stTextures = texmap
                     , stReload   = RSRecreate }

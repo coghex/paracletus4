@@ -6,6 +6,7 @@ module Vulk.Font where
 --import UPrelude
 import FreeType
 import Control.Monad ( when )
+import Data ( ID )
 import Data.Char ( ord )
 import Data.Word ( Word8 )
 import Foreign.Marshal.Array ( peekArray )
@@ -14,6 +15,12 @@ import Foreign.Storable ( Storable(peek) )
 
 -- | a bitmap list of a font texture, giving width and height
 data FontTex = FontTex Int Int [Word8]
+
+-- | data associated with the fonts
+data Font = Font { fontPath  ∷ String
+                 , fontID    ∷ ID
+                 , fontSize  ∷ Maybe Int
+                 , fontIndex ∷ Int } deriving (Show, Eq)
 
 -- | glyph metrics along with the index of
 --   the texture, and the char value
@@ -31,6 +38,31 @@ data GlyphMetrics = GlyphMetrics
   , gmY     ∷ Double
   , gmA     ∷ Double
   } deriving (Show, Eq)
+
+-- | returns the font in a list that has the given id
+findFont ∷ [Font] → ID → Maybe Font
+findFont []                           _  = Nothing
+findFont ((Font fp id0 fsiz find):fs) id
+  | id0 == id = Just $ Font fp id0 fsiz find
+  | otherwise = findFont fs id 
+
+-- | finds ttfdata for a font
+findFontData ∷ [Font] → ID → [[TTFData]] → [TTFData]
+findFontData _                      _  []      = []
+findFontData ((Font _ id0 _ fi):fs) id ttfdata
+  | id0 == id = ttfdata !! fi
+  | otherwise = findFontData fs id ttfdata
+
+-- | calculates the texture index offset of each font
+calcFontOffset ∷ [Font] → Int → Int
+calcFontOffset _     0 = 0
+calcFontOffset fonts n = addUpFontSizes $ take n fonts
+addUpFontSizes ∷ [Font] → Int
+addUpFontSizes []     = 0
+addUpFontSizes (f:fs) = fontsize0 + addUpFontSizes fs
+  where fontsize0 = case fontSize f of
+                      Nothing → 0
+                      Just x0 → x0
 
 -- | finds character metrics for given char
 indexTTFData ∷ [TTFData] → Char → Maybe TTFData

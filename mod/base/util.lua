@@ -17,8 +17,8 @@ function newWindow(str)
     return id
 end
 
-function newText (x,y,w,h,win,text)
-    id = rawNewText (x,y,w,h,win,text)
+function newText (x,y,w,h,win,font,text)
+    id = rawNewText (x,y,w,h,win,font,text)
     game.recreate()
     return id
 end
@@ -67,7 +67,8 @@ function game.selectWin(str)
     rawSelectWin(str)
 end
 function game.loadFont(str)
-    rawLoadFont(str)
+    font = rawLoadFont(str)
+    return font
 end
 function game.initShell()
     rawInitShell()

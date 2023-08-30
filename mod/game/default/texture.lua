@@ -2,7 +2,8 @@ require "mod/base/game"
 JSON = (loadfile "mod/base/json.lua")()
 function initTextures ()
     -- loads all textures in texture.json, loads the font in /dat/font
-    font = game.loadFont("dat/font/asdf.ttf")
+    font1 = game.loadFont("dat/font/asdf.ttf")
+    font2 = game.loadFont("dat/font/oswald.ttf")
     file = io.open ("mod/game/default/texture.json", "r+")
     ftype = io.type(file)
     if ftype == nil then
@@ -17,7 +18,7 @@ function initTextures ()
         io.close(file)
     end
     game.registerTextureMap("mod/game/default/texture.json")
-    return 0
+    return {font1,font2}
 end
 
 texm = {}

@@ -60,13 +60,15 @@ initEnv = do
   fsTV     ← atomically $ newTVar Nothing
   -- we also need to keep track of the font hinting data
   fmTV     ← atomically $ newTVar Nothing
+  -- other data associated with each font
+  fTV      ← atomically $ newTVar Nothing
   -- Tvar specifically for returning object IDs to lua
   idTV     ← atomically $ newTVar Nothing
   -- Tvar specifically for returning data back to lua
   udTV     ← atomically $ newTVar Nothing
   let env = Env { envQueues = Queues queues4
                 , envChans  = Chans chans4
-                , envTVars  = TVars tvars6
+                , envTVars  = TVars tvars7
                 , envLuaSt  = luaSt }
       queues0 = Map.empty
       queues1 = Map.insert EventQueue eventQ  queues0
@@ -83,8 +85,9 @@ initEnv = do
       tvars2  = Map.insert DynsTVar     dynsTV  tvars1
       tvars3  = Map.insert FontSizeTVar fsTV    tvars2
       tvars4  = Map.insert FontMapTVar  fmTV    tvars3
-      tvars5  = Map.insert IDTVar       idTV    tvars4
-      tvars6  = Map.insert UDTVar       udTV    tvars5
+      tvars5  = Map.insert FontsTVar    fTV     tvars4
+      tvars6  = Map.insert IDTVar       idTV    tvars5
+      tvars7  = Map.insert UDTVar       udTV    tvars6
   -- and env that can be accessed transactionally
   envChan ← atomically $ newTVar env
   -- we return both so that initState doesnt need to load the TVar
@@ -111,7 +114,7 @@ initState _   = do
                              , stLoaded    = False
                              , stSettings  = settings
                              , stTextures  = []
-                             , stFont      = Nothing
+                             , stFont      = []
                              , stStartT    = st
                              , stFPS       = FPS 60.0 60 True
                              , stTick      = Nothing }
