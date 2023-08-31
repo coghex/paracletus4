@@ -367,7 +367,7 @@ genCommandBuffs dev pdev commandPool queues graphicsPipeline renderPass
         logDebug "[Vulk] generating verticies..."
         let res   = calcVertices $ emptyTiles $ length tiles --tiles
             (w,h) = (fromIntegral w'/64.0,fromIntegral h'/64.0)
-            tiles = [Tile IDNULL (TilePos (0,0) (4,4)) (TileTex (0,0) (1,1) 1)]
+            tiles = [Tile IDNULL (TilePos (0,0) (4,4)) (TileTex (0,0) (1,1) 0)]
             dyns  = generateDynData tiles
         modifyTVar env DynsTVar $ TVDyns dyns
         modifyTVar env VertsTVar $ TVVerts $ Verts res

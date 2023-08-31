@@ -142,7 +142,7 @@ generateElemTiles _        fonts ttfdata (WinElemText text)
   = case findFont fonts id0 of
     Nothing → []
     Just font0 → genStringTiles fontsize' fd (fst pos) pos siz $ textString text
-                   where fd = (reverse ttfdata) !! fontIndex font0
+                   where fd = ttfdata !! fontIndex font0
                          fontsize' = calcFontOffset fonts $ fontIndex font0
     where pos = textPos text
           id0 = textFont text 

@@ -308,11 +308,12 @@ genStringTiles fontsize ttfdata x0 (x,y) (w,h) (ch:str)   = case indexTTFData tt
   Just (TTFData _ chInd (GlyphMetrics chW chH chX chY chA))
     → tile : genStringTiles fontsize ttfdata x0 (x+(w*2*chA),y) (w,h) str
       where tile = Tile IDNULL (TilePos (x',y') (w',h'))
-                               (TileTex (0,0) (1,1) chInd)
-            (x',y') = (realToFrac(x+(2*chX)+chW)
-                      ,realToFrac(y+(2*chY)-chH-0.1))
+                               (TileTex (0,0) (1,1) chInd')
+            (x',y') = (realToFrac(x+(2*w*chX)+w*chW)
+                      ,realToFrac(y+(2*h*chY)-h*chH-0.1))
             (w',h') = (w * realToFrac chW
                       ,h * realToFrac chH)
+            chInd'  = chInd + fontsize
 
 -- | the shells state as a string
 genShellStr ∷ Shell → String
