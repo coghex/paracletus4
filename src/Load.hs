@@ -17,7 +17,7 @@ import Data.Map as Map
 import Data.String ( fromString )
 import Load.Data
 import Load.Util ( emptyTiles )
-import Luau.Shell ( toggleShell, shTiles, processShellCommand, genStringTiles )
+import Luau.Shell ( toggleShell, shTiles, processShellCommand, genStringTiles, positionShell )
 import Prog.Data
 import Prog.Buff ( generateDynData )
 import Sign.Data
@@ -84,10 +84,11 @@ processCommands ds = do
             ttfdata ← readFontMapM
             fonts ← readFonts
             olddyns ← readTVar DynsTVar
+            shdat ← positionShell (dsWindow ds') (dsShell ds')
             let tiles = shell ⧺ wins
                 wins  = findTiles fontsize fonts ttfdata (dsCurr ds') (dsWins ds')
                 dyns  = generateDynData tiles
-                shell = shTiles fontsize (head ttfdata) (dsShell ds')
+                shell = shTiles fontsize (head ttfdata) shdat
             modifyTVar DynsTVar $ TVDyns dyns
             --log' (LogDebug 1) $ "[Load] regenerating dyns: "
             --                  ⧺ show (length tiles)
@@ -100,12 +101,13 @@ processCommands ds = do
             fontsize ← readFontSize
             ttfdata ← readFontMapM
             fonts ← readFonts
+            shdat ← positionShell (dsWindow ds') (dsShell ds')
             -- TODO: find why we need to reverse this
             let verts = Verts $ calcVertices $ reverse tiles
                 tiles = shell ⧺ wins
                 wins  = findTiles fontsize fonts ttfdata (dsCurr ds') (dsWins ds')
                 dyns  = generateDynData tiles
-                shell = shTiles fontsize (head ttfdata) (dsShell ds')
+                shell = shTiles fontsize (head ttfdata) shdat
             modifyTVar VertsTVar $ TVVerts verts
             modifyTVar DynsTVar $ TVDyns dyns
             sendSys SysRecreate
@@ -140,7 +142,7 @@ generateElemTiles _        fonts ttfdata (WinElemText text)
   = case findFont fonts id0 of
     Nothing → []
     Just font0 → genStringTiles fontsize' fd (fst pos) pos siz $ textString text
-                   where fd = ttfdata !! fontIndex font0
+                   where fd = (reverse ttfdata) !! fontIndex font0
                          fontsize' = calcFontOffset fonts $ fontIndex font0
     where pos = textPos text
           id0 = textFont text 
@@ -171,6 +173,8 @@ processCommand ds cmd = case cmd of
       Nothing → do
         log' LogWarn $ "[Load] window " ⧺ name ⧺ " doesnt exist in :" ⧺ show wins
         return LoadResultSuccess
+  LoadState (LSCSetGLFWWindow win) → do
+    return $ LoadResultDrawState ds { dsWindow = Just win }
   LoadTest → do
         sendTest
         return $ LoadResultDrawState $ ds { dsStatus = DSSRecreate }
@@ -286,7 +290,7 @@ createTextureAtlasMap n ((AtlasData name fp w h):tds)
 
 -- | initial draw state
 initDrawState ∷ DrawState
-initDrawState = DrawState DSSNULL (TextureMap []) Map.empty [] initShell
+initDrawState = DrawState DSSNULL Nothing (TextureMap []) Map.empty [] initShell
 -- | creates a shell with empty values
 initShell ∷ Shell
-initShell = Shell "$> " Nothing 1 True "" "" "" "" False False (-1) []
+initShell = Shell "$> " Nothing 1 True "" "" "" "" False False (0,0) (0,0) (-1) []

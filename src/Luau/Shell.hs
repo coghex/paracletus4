@@ -17,6 +17,16 @@ import qualified Vulk.GLFW as GLFW
 import qualified HsLua as Lua
 import qualified Data.ByteString.Char8 as BL
 
+-- | gets the window size and positions the shell accordingly
+positionShell ∷ (MonadLog μ, MonadFail μ) ⇒ Maybe GLFW.Window → Shell → μ Shell
+positionShell win sh = do
+  (x',y') ← case win of
+    Nothing → return (0,0)
+    Just w0 → liftIO $ GLFW.getWindowSize w0
+  let (x,y) = (realToFrac x'/ 64, realToFrac y' / 64)
+  return sh { shPos  = (1-x,y-1)
+            , shSize = (round x - 2,round y - 3) }
+
 -- | processing of shell commands
 processShellCommand ∷ (MonadLog μ,MonadFail μ) ⇒ DrawState → ShellCmd → LogT μ LoadResult
 processShellCommand ds ShToggle       = do
@@ -245,7 +255,7 @@ execShell ls str = do
 shTiles ∷ Int → [TTFData] → Shell → [Tile]
 shTiles fontsize ttfdata sh = tiles
   where tiles     = curstiles ⧺ txttiles ⧺ boxtiles
-        pos       = (-10,5)
+        pos       = shPos sh
         boxtiles  = boxTiles fontsize pos sh
         txttiles  = txtTiles fontsize ttfdata pos sh 512
         curstiles = cursTiles fontsize ttfdata pos sh
@@ -325,45 +335,43 @@ genShellOut out ret = (init out) ⧺ "> " ⧺ ret ⧺ "\n"
 -- | a list of tiles that makes a box
 boxTiles ∷ Int → (Double,Double) → Shell → [Tile]
 boxTiles fontsize pos sh  = tiles
-    where pos        = (-10,5)
-          width      = 8
-          height     = 6
-          width'     = 2.0 * fromIntegral (width+1)
-          height'    = 2.0 * fromIntegral (height+1)
-          postl      = pos
-          postr      = ((fst pos) + width', snd pos)
-          posbl      = (fst pos, (snd pos) - height')
-          posbr      = ((fst pos) + width',(snd pos) - height')
-          blanktile  = Tile IDNULL (TilePos (0,0) (1,1))
-                                   (TileTex (0,0) (1,1) fontsize)
-          filltile   = Tile IDNULL (TilePos pos (1,1))
-                                   (TileTex (0,0) (1,1) (fontsize-9))
-          righttile  = Tile IDNULL (TilePos postr (1,1))
-                                   (TileTex (0,0) (1,1) (fontsize-8))
-          toptile    = Tile IDNULL (TilePos postl (1,1))
-                                   (TileTex (0,0) (1,1) (fontsize-7))
-          toprtile   = Tile IDNULL (TilePos postr (1,1))
-                                   (TileTex (0,0) (1,1) (fontsize-6))
-          topltile   = Tile IDNULL (TilePos postl (1,1))
-                                   (TileTex (0,0) (1,1) (fontsize-5))
-          bottile    = Tile IDNULL (TilePos posbl (1,1))
-                                   (TileTex (0,0) (1,1) (fontsize-4))
-          botrtile   = Tile IDNULL (TilePos posbr (1,1))
-                                   (TileTex (0,0) (1,1) (fontsize-3))
-          botltile   = Tile IDNULL (TilePos posbl (1,1))
-                                   (TileTex (0,0) (1,1) (fontsize-2))
-          lefttile   = Tile IDNULL (TilePos postl (1,1))
-                                   (TileTex (0,0) (1,1) (fontsize-1))
-          toptiles   = tileHor width toptile
-          bottiles   = tileHor width bottile
-          lefttiles  = tileVer height lefttile
-          righttiles = tileVer height righttile
-          fill       = tileFill width height filltile
-          tiles'     = topltile : toprtile : botltile : botrtile
-                     : (toptiles ⧺ bottiles ⧺ lefttiles ⧺ righttiles ⧺ fill)
-          tiles      = case shLoaded sh of
-                         False → take (length tiles') $ repeat blanktile
-                         True  → tiles'
+  where (width,height) = shSize sh
+        width'         = 2.0 * fromIntegral (width+1)
+        height'        = 2.0 * fromIntegral (height+1)
+        postl          = pos
+        postr          = ((fst pos) + width', snd pos)
+        posbl          = (fst pos, (snd pos) - height')
+        posbr          = ((fst pos) + width',(snd pos) - height')
+        blanktile      = Tile IDNULL (TilePos (0,0) (1,1))
+                                     (TileTex (0,0) (1,1) fontsize)
+        filltile       = Tile IDNULL (TilePos pos (1,1))
+                                     (TileTex (0,0) (1,1) (fontsize-9))
+        righttile      = Tile IDNULL (TilePos postr (1,1))
+                                     (TileTex (0,0) (1,1) (fontsize-8))
+        toptile        = Tile IDNULL (TilePos postl (1,1))
+                                     (TileTex (0,0) (1,1) (fontsize-7))
+        toprtile       = Tile IDNULL (TilePos postr (1,1))
+                                     (TileTex (0,0) (1,1) (fontsize-6))
+        topltile       = Tile IDNULL (TilePos postl (1,1))
+                                     (TileTex (0,0) (1,1) (fontsize-5))
+        bottile        = Tile IDNULL (TilePos posbl (1,1))
+                                     (TileTex (0,0) (1,1) (fontsize-4))
+        botrtile       = Tile IDNULL (TilePos posbr (1,1))
+                                     (TileTex (0,0) (1,1) (fontsize-3))
+        botltile       = Tile IDNULL (TilePos posbl (1,1))
+                                     (TileTex (0,0) (1,1) (fontsize-2))
+        lefttile       = Tile IDNULL (TilePos postl (1,1))
+                                     (TileTex (0,0) (1,1) (fontsize-1))
+        toptiles       = tileHor width toptile
+        bottiles       = tileHor width bottile
+        lefttiles      = tileVer height lefttile
+        righttiles     = tileVer height righttile
+        fill           = tileFill width height filltile
+        tiles'         = topltile : toprtile : botltile : botrtile
+                       : (toptiles ⧺ bottiles ⧺ lefttiles ⧺ righttiles ⧺ fill)
+        tiles          = case shLoaded sh of
+                           False → take (length tiles') $ repeat blanktile
+                           True  → tiles'
 
 tileHor ∷ Int → Tile → [Tile]
 tileHor 0 tile = []

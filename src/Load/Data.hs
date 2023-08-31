@@ -12,6 +12,7 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import Numeric.DataFrame ( Mat44f )
 import GHC.Generics
+import qualified Vulk.GLFW as GLFW
 
 -- | transformation matricies that apply to a tile
 data DynData = DynData { ddDataF ∷ Mat44f
@@ -32,6 +33,8 @@ data TileTex = TileTex { tInd   ∷ (Int,Int)
 -- | the state of the load thread
 data DrawState = DrawState
   { dsStatus    ∷ DSStatus -- ^ return status for thread
+  -- | a reference to the glfw window
+  , dsWindow    ∷ Maybe GLFW.Window
   -- | each texture has a fp and size
   , dsTexMap    ∷ TextureMap
   -- | list of window objects

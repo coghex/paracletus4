@@ -62,7 +62,7 @@ data InpCmd  = InpEvent InputEvent | InpState InputStateChange
 
 -- | possible changes to the load state
 data LoadStateChange = LSCRegisterTileMap String | LSCRegisterTextureMap String
-                     | LSCSelectWin String
+                     | LSCSelectWin String | LSCSetGLFWWindow GLFW.Window
                      | LSCNULL deriving (Show, Eq)
 
 -- | possible names of timers
