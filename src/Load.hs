@@ -133,18 +133,18 @@ generateWinTiles fontsize fonts ttfdata (we:wes)
   = tiles ⧺ generateWinTiles fontsize fonts ttfdata wes
   where tiles = generateElemTiles fontsize fonts ttfdata we
 generateElemTiles ∷ Int → [Font] → [[TTFData]] → WinElem → [Tile]
-generateElemTiles fontsize fonts _       (WinElemTile tile) = [tile']
-  where Tile id tp (TileTex tind tsiz t) = tile
-        tile'                         = Tile id tp (TileTex tind tsiz (t + fontsize))
-generateElemTiles fontsize fonts ttfdata (WinElemText text)
-  = case findFont fonts id of
+generateElemTiles fontsize _     _       (WinElemTile tile) = [tile']
+  where Tile id0 tp (TileTex tind tsiz t) = tile
+        tile'                             = Tile id0 tp (TileTex tind tsiz (t + fontsize))
+generateElemTiles _        fonts ttfdata (WinElemText text)
+  = case findFont fonts id0 of
     Nothing → []
-    Just font0 → genStringTiles fontsize' fd (fst pos) pos $ textString text
+    Just font0 → genStringTiles fontsize' fd (fst pos) pos siz $ textString text
                    where fd = ttfdata !! fontIndex font0
                          fontsize' = calcFontOffset fonts $ fontIndex font0
     where pos = textPos text
-          font = findFont fonts id
-          id  = textFont text 
+          id0 = textFont text 
+          siz = textSize text
 generateElemTiles _        _     _       WinElemNULL        = []
 
 -- | this is the case statement for processing load commands
@@ -172,9 +172,7 @@ processCommand ds cmd = case cmd of
         log' LogWarn $ "[Load] window " ⧺ name ⧺ " doesnt exist in :" ⧺ show wins
         return LoadResultSuccess
   LoadTest → do
-        --sendTest
-        log' LogInfo $ "[Load] curr window: " ⧺ show (dsCurr ds)
-        log' LogInfo $ "[Load] windows: " ⧺ show (dsWins ds)
+        sendTest
         return $ LoadResultDrawState $ ds { dsStatus = DSSRecreate }
   LoadID → do
     log' LogInfo "[Load] creating id..."

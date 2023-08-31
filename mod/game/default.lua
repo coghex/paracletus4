@@ -10,17 +10,17 @@ function initMod ()
     -- basic UI elements
     game.logDebug("default mod: initMod()")
     initInput ()
-    font = initTextures ()
-    ls = initLoadScreen (font)
+    fonts = initTextures ()
+    ls = initLoadScreen (fonts)
     game.selectWin (ls)
     game.start()
 end
 function runMod ()
     if loaded == 2 then
-        m = initMenu(font)
+        m = initMenu(fonts)
         game.selectWin (m)
         game.logDebug("loaded")
         loaded = 3
     end
-    game.logDebug("default mod: runMod()")
+    --game.logDebug("test mod: runMod()")
 end

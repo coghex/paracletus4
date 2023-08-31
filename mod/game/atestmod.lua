@@ -4,5 +4,5 @@ function initMod ()
     game.logDebug("test mod: initMod()")
 end
 function runMod ()
-    game.logDebug("test mod: runMod()")
+    --game.logDebug("test mod: runMod()")
 end

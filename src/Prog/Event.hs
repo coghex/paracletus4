@@ -51,12 +51,8 @@ processEvent (QCEvent event) = case event of
                     , stReload   = RSRecreate }
   EventGet gc → getData gc
   EventTest → do
-    env ← ask
-    dyns ← readTVar' env DynsTVar
-    case dyns of
-      Nothing          → logCommand LogWarn "no dyns"
-      Just (TVDyns d0) → logCommand (LogDebug 1) $ "len: " ⧺ show d0
-      Just _           → logCommand LogWarn "junk in dyns"
+    st ← get
+    logCommand LogInfo $ show $ stFont st
   _                   → log'' LogError $ "Unknown event: " ⧺ show event
 processEvent _               = return ()
 

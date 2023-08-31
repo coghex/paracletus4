@@ -272,7 +272,7 @@ txtTiles fontsize ttfdata pos sh buffSize = case shLoaded sh of
     (Tile IDNULL (TilePos (0,0) (1,1)) (TileTex (0,0) (1,1) fontsize))
   True  → tiles ⧺ take (buffSize - length tiles)
     (repeat (Tile IDNULL (TilePos (0,0) (1,1)) (TileTex (0,0) (1,1) fontsize)))
-    where tiles  = genStringTiles fontsize ttfdata (fst pos') pos' string
+    where tiles  = genStringTiles fontsize ttfdata (fst pos') pos' (1,1) string
           string = genShellStr sh
           pos'   = (fst pos + 1, snd pos - 1)
 
@@ -286,22 +286,23 @@ findCursPos ttfdata (ch:str)  = case indexTTFData ttfdata ch of
     where wid = 2*chA
 
 -- | generates the tiles for a single string
-genStringTiles ∷ Int → [TTFData] → Double → (Double,Double) → String → [Tile]
-genStringTiles _        _       _  _     []         = []
-genStringTiles fontsize ttfdata x0 (x,y) (' ':str)
-  = genStringTiles fontsize ttfdata x0 (x+0.1,y) str
-genStringTiles fontsize ttfdata x0 (_,y) ('\n':str)
-  = genStringTiles fontsize ttfdata x0 (x0,y-1) str
-genStringTiles fontsize ttfdata x0 (x,y) (ch:str)   = case indexTTFData ttfdata ch of
-  Nothing → genStringTiles fontsize ttfdata x0 (x,y) str
+genStringTiles ∷ Int → [TTFData] → Double → (Double,Double)
+  → (Double,Double) → String → [Tile]
+genStringTiles _        _       _  _     _     []         = []
+genStringTiles fontsize ttfdata x0 (x,y) (w,h) (' ':str)
+  = genStringTiles fontsize ttfdata x0 (x+0.1,y) (w,h) str
+genStringTiles fontsize ttfdata x0 (_,y) (w,h) ('\n':str)
+  = genStringTiles fontsize ttfdata x0 (x0,y-1) (w,h) str
+genStringTiles fontsize ttfdata x0 (x,y) (w,h) (ch:str)   = case indexTTFData ttfdata ch of
+  Nothing → genStringTiles fontsize ttfdata x0 (x,y) (w,h) str
   Just (TTFData _ chInd (GlyphMetrics chW chH chX chY chA))
-    → tile : genStringTiles fontsize ttfdata x0 (x+(2*chA),y) str
+    → tile : genStringTiles fontsize ttfdata x0 (x+(w*2*chA),y) (w,h) str
       where tile = Tile IDNULL (TilePos (x',y') (w',h'))
                                (TileTex (0,0) (1,1) chInd)
             (x',y') = (realToFrac(x+(2*chX)+chW)
                       ,realToFrac(y+(2*chY)-chH-0.1))
-            (w',h') = (realToFrac chW
-                      ,realToFrac chH)
+            (w',h') = (w * realToFrac chW
+                      ,h * realToFrac chH)
 
 -- | the shells state as a string
 genShellStr ∷ Shell → String
