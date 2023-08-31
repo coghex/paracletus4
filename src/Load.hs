@@ -90,8 +90,8 @@ processCommands ds = do
                 dyns  = generateDynData tiles
                 shell = shTiles fontsize (head ttfdata) shdat
             modifyTVar DynsTVar $ TVDyns dyns
-            --log' (LogDebug 1) $ "[Load] regenerating dyns: "
-            --                  ⧺ show (length tiles)
+            log' (LogDebug 1) $ "[Load] ***regenerating dyns: "
+                              ⧺ show (length tiles)
             if length olddyns ≠ length dyns then do
               let verts = Verts $ calcVertices $ reverse tiles
               modifyTVar VertsTVar $ TVVerts verts
@@ -111,8 +111,8 @@ processCommands ds = do
             modifyTVar VertsTVar $ TVVerts verts
             modifyTVar DynsTVar $ TVDyns dyns
             sendSys SysRecreate
-            --log' (LogDebug 1) $ "[Load] regenerating verts and dyns: "
-            --                  ⧺ show (length tiles)
+            log' (LogDebug 1) $ "[Load] ***regenerating verts and dyns: "
+                              ⧺ show (length tiles)
             processCommands ds' { dsStatus = DSSNULL }
           DSSNULL   → processCommands ds'
         LoadResultError str     → do
@@ -147,6 +147,16 @@ generateElemTiles _        fonts ttfdata (WinElemText text)
     where pos = textPos text
           id0 = textFont text 
           siz = textSize text
+generateElemTiles _        fonts ttfdata (WinElemButton text _)
+  = case findFont fonts id0 of
+    Nothing → []
+    Just font0 → genStringTiles fontsize' fd (fst pos) pos siz $ textString text
+                   where fd = ttfdata !! fontIndex font0
+                         fontsize' = calcFontOffset fonts $ fontIndex font0
+    where pos = textPos text
+          id0 = textFont text 
+          siz = textSize text
+
 generateElemTiles _        _     _       WinElemNULL        = []
 
 -- | this is the case statement for processing load commands
@@ -208,7 +218,7 @@ newChunk ds (LCWindow name)            = do
   writeIDTVar $ ID id0
   return $ LoadResultDrawState $ ds { dsWins = Map.insert id0 (Window name []) (dsWins ds) }
 newChunk ds (LCTile  win pos tex)      = do
-  log' LogInfo $ "[Load] loading new tile to win " ⧺ show win
+  log' (LogDebug 1) $ "[Load] loading new tile to win " ⧺ show win
   id0 ← liftIO newID
   let TextureMap tm = dsTexMap ds
       tile          = Tile id0 pos tt
@@ -227,6 +237,10 @@ newChunk ds (LCText win text) = do
   --let tile = Tile id0 (TilePos pos siz) $ TileTex (0,0) (1,1) (-10)
   writeIDTVar id0
   return $ LoadResultDrawState $ newText ds win text id0
+newChunk ds (LCButton win text buttfunc) = do
+  id0 ← liftIO newID
+  writeIDTVar id0
+  return $ LoadResultDrawState $ newButton ds win text id0 buttfunc
 newChunk _  LCNULL                     = return LoadResultSuccess
 newChunk _  lc                         = do
   log' LogWarn $ "[Load] unknown load chunk command " ⧺ show lc
@@ -234,11 +248,18 @@ newChunk _  lc                         = do
 
 -- | adds a new tile to a window
 newTile ∷ DrawState → String → Tile → DrawState
-newTile ds win tile = ds { dsWins   = addElemToWin (dsWins ds) win (WinElemTile tile) }
+newTile ds win tile =
+  ds { dsWins = addElemToWin (dsWins ds) win (WinElemTile tile) }
 -- | adds a new text section to a window
 newText ∷ DrawState → String → Text → ID → DrawState
-newText ds win text id = ds { dsWins   = addElemToWin (dsWins ds) win (WinElemText text') }
-  where text' = text { textID = id }
+newText ds win text id0 =
+  ds { dsWins = addElemToWin (dsWins ds) win (WinElemText text') }
+  where text' = text { textID = id0 }
+-- | adds a button to a window
+newButton ∷ DrawState → String → Text → ID → ButtonFunc → DrawState
+newButton ds win text id0 buttfunc =
+  ds { dsWins = addElemToWin (dsWins ds) win (WinElemButton text' buttfunc) }
+  where text' = text { textID = id0 }
 addElemToWin ∷ Map.Map String Window → String → WinElem → Map.Map String Window
 addElemToWin wins win elem = case Map.lookup win wins of
   Nothing → wins

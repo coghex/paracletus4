@@ -15,7 +15,7 @@ import Sign.Data
 import Sign.Queue ( writeQueue, readChan, tryReadChan )
 import Sign.Var ( atomically, readTVar )
 import Sign.Util ( writeQueue'', writeChan'', readTVar'', clearTVar )
-import Load.Data ( Tile(..), TilePos(..), TileTex(..), Text(..) )
+import Load.Data
 import Luau.Util ( vtail, vhead, luaEvent )
 import Luau.Data ( ShellCmd(..), UserVar(..) )
 import Vulk.Font ( Font(..) )
@@ -111,17 +111,30 @@ hsNewAtlas env x y w h win t tx ty = do
   readID env
 
 -- | create a new section of text
-hsNewText ∷ Env → Double → Double → Double → Double → String → String → String → Lua.Lua String
+hsNewText ∷ Env → Double → Double → Double → Double
+  → String → String → String → Lua.Lua String
 hsNewText env x y w h win font text = do
   clearID env
   Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew
              $ LCText win $ Text IDNULL (x,y) (w,h) (ID font) text
   readID env
 
+-- | create a new button
+hsNewLink ∷ Env → Double → Double → Double → Double
+  → String → String → String → String → Lua.Lua String
+hsNewLink env x y w h win font text link = do
+  clearID env
+  Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew
+             $ LCButton win (Text IDNULL (x,y) (w,h) (ID font) text) (BFLink (ID link))
+  id0 ← readID env
+  Lua.liftIO $ writeQueue'' env InputQueue $ QCInpCmd $ InpState
+    $ ISCNewElem $ IEButt $ Button ButtFuncLink (x,y) (w,h)
+  return id0
+
 -- | starts the lua thread
 hsStart ∷ Env → Lua.Lua ()
 hsStart env = do
-  luaEvent env $ EventLog LogInfo $ "[Luau] sending lua start command..."
+  luaEvent env $ EventLog (LogDebug 1) $ "[Luau] sending lua start command..."
   Lua.liftIO $ writeChan'' env LuaChan TStart
 
 -- | reloads the command buffers of the engine
@@ -132,7 +145,7 @@ hsReload env = Lua.liftIO $ writeQueue'' env LoadQueue
 -- | reloads the command buffers of the engine
 hsRecreate ∷ Env → Lua.Lua ()
 hsRecreate env = do
-  luaEvent env $ EventLog LogInfo $ "[Luau] recreating..."
+  luaEvent env $ EventLog (LogDebug 1) $ "[Luau] recreating..."
   Lua.liftIO $ writeQueue'' env LoadQueue
     $ QCLoadCmd LoadRecreate
 

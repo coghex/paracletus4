@@ -3,8 +3,8 @@ module Sign.Data where
 -- data for the main event queue is defined
 import Prelude()
 import UPrelude
-import Data ( PrintArg(..), KeyMap(..), KeyFunc(..) )
-import Load.Data ( Tile, DrawState, TilePos, DynData(..), TextureMap(..), Text(..) )
+import Data ( PrintArg(..), KeyMap(..), KeyFunc(..), ID(..) )
+import Load.Data
 import Luau.Data ( ShellCmd(..) )
 import Vulk.Data ( Verts(..) )
 import Vulk.Font ( Font(..) )
@@ -52,6 +52,7 @@ data LoadChunk = LCWindow String
                | LCText String Text
                | LCTile String TilePos String
                | LCAtlas String TilePos String (Int,Int)
+               | LCButton String Text ButtonFunc
                | LCNULL deriving (Show, Eq)
 -- | possible data user can request from the load thread
 data GetCommand = GCWindow
@@ -64,7 +65,6 @@ data InpCmd  = InpEvent InputEvent | InpState InputStateChange
 data LoadStateChange = LSCRegisterTileMap String | LSCRegisterTextureMap String
                      | LSCSelectWin String | LSCSetGLFWWindow GLFW.Window
                      | LSCNULL deriving (Show, Eq)
-
 -- | possible names of timers
 data TimerName = ShellCursorTimer | NULLTimer deriving (Show, Eq)
 
@@ -88,12 +88,23 @@ data InputEvent
 -- | possible changes to the input state
 data InputStateChange = ISCRegisterKeys String
                       | ISCCapture Capture
+                      | ISCNewElem InputElem
                       | ISCNULL deriving (Show, Eq)
 
 -- | input state is simply the state of the input thread
-data InputState = InputState { keyMap  ∷ KeyMap
-                             , keyCap  ∷ Capture
-                             , mouseSt ∷ MouseState } deriving (Show, Eq)
+data InputState = InputState { keyMap     ∷ KeyMap
+                             , keyCap     ∷ Capture
+                             , inputElems ∷ [InputElem]
+                             , mouseSt    ∷ MouseState } deriving (Show, Eq)
+
+-- | various window elems have a corresponding input elem
+data InputElem = IEButt Button | IENULL deriving (Show, Eq)
+-- | button input information
+data Button = Button { bFunc ∷ ButtFunc
+                     , bPos  ∷ (Double,Double)
+                     , bSize ∷ (Double,Double) } deriving (Show, Eq)
+-- | button functions
+data ButtFunc = ButtFuncLink | ButtFuncNULL deriving (Show, Eq)
 
 -- | the type of captured input
 data Capture = CaptureShell | CaptureNULL deriving (Show, Eq)

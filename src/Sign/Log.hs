@@ -6,6 +6,7 @@ module Sign.Log where
 
 import Prelude()
 import UPrelude
+import Control.Concurrent (threadDelay)
 import Control.Monad.IO.Class
 import Control.Monad.Morph
 import Control.Monad.Reader
@@ -100,10 +101,11 @@ readLoadTimer = do
 readLoadTimerBlocked ∷ (MonadLog μ, MonadFail μ) ⇒ μ TState
 readLoadTimerBlocked = do
   (Log _   env _   _   _) ← askLog
+  liftIO $ threadDelay 1000
   res ← liftIO $ readChan' env LoadChan
   case res of
     Nothing  → do
-      liftIO $ print "ERROR: NO TIMER CHAN"
+      --liftIO $ print "ERROR: NO LOAD CHAN"
       return TStop
     Just res → return res
 
@@ -117,6 +119,7 @@ readTimeTimer = do
 readTimeTimerBlocked ∷ (MonadLog μ, MonadFail μ) ⇒ μ TState
 readTimeTimerBlocked = do
   (Log _   env _   _   _) ← askLog
+  liftIO $ threadDelay 1000
   res ← liftIO $ readChan' env TimeChan
   case res of
     Nothing  → do

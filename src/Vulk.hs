@@ -135,7 +135,6 @@ runVulk = do
       logDebug "[Vulk] forking lua interpreter..."
       env ← ask
       writeChan' env InputChan TStart
-      writeChan' env LoadChan TStart
       writeChan' env TimeChan TStart
       _ ← liftIO $ forkIO $ luauThread env
       _ ← liftIO $ forkIO $ inputThread env window
@@ -365,9 +364,11 @@ genCommandBuffs dev pdev commandPool queues graphicsPipeline renderPass
           Just w0 → liftIO $ GLFW.getWindowSize w0
           Nothing → return (800,600)
         logDebug "[Vulk] generating verticies..."
-        let res   = calcVertices $ emptyTiles $ length tiles --tiles
+        let res   = calcVertices tiles
             (w,h) = (fromIntegral w'/64.0,fromIntegral h'/64.0)
-            tiles = [Tile IDNULL (TilePos (0,0) (4,4)) (TileTex (0,0) (1,1) 0)]
+            tiles = [Tile IDNULL (TilePos (0,0)
+                                 (fromIntegral w',fromIntegral h'))
+                                 (TileTex (0,0) (1,1) 0)]
             dyns  = generateDynData tiles
         modifyTVar env DynsTVar $ TVDyns dyns
         modifyTVar env VertsTVar $ TVVerts $ Verts res
@@ -379,6 +380,7 @@ genCommandBuffs dev pdev commandPool queues graphicsPipeline renderPass
     indexBufferNew
       ← createIndexBuffer pdev dev commandPool
         (graphicsQueue queues) inds0
+    writeChan' env LoadChan TStart
     createCommandBuffers dev graphicsPipeline commandPool renderPass
       (pipelineLayout texData) swapInfo vertexBufferNew
       (dfLen inds0, indexBufferNew) framebuffers descriptorSets

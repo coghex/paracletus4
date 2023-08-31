@@ -6,7 +6,7 @@ module Prog.Mouse where
 import Prelude()
 import UPrelude
 import Prog.Data (Env(..))
-import Sign.Data (InputState(..), MouseState(..), LogLevel(..))
+import Sign.Data (InputState(..), MouseState(..), LogLevel(..), Button(..))
 import Sign.Util ( log' )
 import qualified Vulk.GLFW as GLFW
 
@@ -14,6 +14,7 @@ import qualified Vulk.GLFW as GLFW
 processMouse ∷ Env → GLFW.Window → InputState → IO InputState
 processMouse env win is = do
   pos ← GLFW.getCursorPos win
+  siz ← GLFW.getWindowSize win
   let newms = (mouseSt is) { mousePos = pos }
   return is { mouseSt = newms }
 

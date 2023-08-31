@@ -56,6 +56,7 @@ luauThread env = do
         Lua.registerHaskellFunction (fromString "rawNewTile")   (hsNewTile      env)
         Lua.registerHaskellFunction (fromString "rawNewAtlas")  (hsNewAtlas     env)
         Lua.registerHaskellFunction (fromString "rawNewText")   (hsNewText      env)
+        Lua.registerHaskellFunction (fromString "rawNewLink")   (hsNewLink      env)
         Lua.registerHaskellFunction (fromString "rawReload")    (hsReload       env)
         Lua.registerHaskellFunction (fromString "rawRecreate")  (hsRecreate     env)
         Lua.registerHaskellFunction (fromString "rawNewWindow") (hsNewWindow    env)

@@ -106,7 +106,7 @@ createCommandBuffers dev pipeline commandPool rpass pipelineLayout
                &* setListCountAndRef @"clearValueCount" @"pClearValues"
                    [ createVk @VkClearValue
                        $ setVk @"color"
-                       $ setVec @"float32" (vec4 0 0 0.2 1)
+                       $ setVec @"float32" (vec4 0 0 0 1)
                    , createVk @VkClearValue $ setVk @"depthStencil"
                        $  set @"depth" 1.0
                        &* set @"stencil" 0 ]

@@ -36,7 +36,7 @@ processEvent (QCEvent event) = case event of
   EventSys SysReload   → modify $ \s → s { stReload = RSReload }
   EventSys SysRecreate → modify $ \s → s { stReload = RSRecreate }
   EventSys SysExit     → do
-    logCommand (LogDebug 1) "quitting..."
+    logCommand (LogDebug 1) "[Vulk] quitting..."
     st ← get
     case stWindow st of
       Just win → liftIO $ GLFW.setWindowShouldClose win True
@@ -44,11 +44,9 @@ processEvent (QCEvent event) = case event of
   EventSys sysEvent    → log'' LogWarn $ "Unknown sysaction: " ⧺ show event
   EventLog level str   → logCommand level str
   EventInput inpEvent  → writeQueue' InputQueue $ QCInpCmd $ InpEvent inpEvent
-  EventLoadFont font → modify $ \s → s { stFont   = stFont s ⧺ [font]
-                                       , stReload = RSRecreate }
+  EventLoadFont font → modify $ \s → s { stFont   = stFont s ⧺ [font] }
   EventTextures texmap → do
-    modify $ \s → s { stTextures = texmap
-                    , stReload   = RSRecreate }
+    modify $ \s → s { stTextures = texmap }
   EventGet gc → getData gc
   EventTest → do
     st ← get

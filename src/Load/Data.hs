@@ -52,8 +52,10 @@ data Window = Window { winTitle ∷ String
 -- | window elements define various things that can be interacted with
 data WinElem = WinElemTile Tile
              | WinElemText Text
+             | WinElemButton Text ButtonFunc
              | WinElemNULL deriving (Show, Eq)
-
+-- | poossible button functions
+data ButtonFunc = BFLink ID | BFNULL deriving (Show, Eq)
 -- | defines a section of text
 data Text = Text { textID     ∷ ID
                  , textPos    ∷ (Double,Double)

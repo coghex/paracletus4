@@ -92,6 +92,9 @@ processInput env is (InpState (ISCRegisterKeys path))           = do
 processInput env is (InpState (ISCCapture cap))                 = do
   let is' = is { keyCap = cap }
   return $ EventResultInputState is'
+processInput env is (InpState (ISCNewElem elem))                = do
+  let is' = is
+  return $ EventResultInputState is'
 processInput env _  inpCmd
   = return $ EventResultError $ "unknown command " ⧺ show inpCmd
 
