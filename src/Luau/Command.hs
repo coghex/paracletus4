@@ -55,7 +55,7 @@ hsRegisterTextureMap env str = Lua.liftIO $ writeQueue'' env LoadQueue
 hsNewWindow ∷ Env → String → Lua.Lua String
 hsNewWindow env name = do
   clearID env
-  Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew $ LCWindow name
+  Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew $ LCWindow $ ID name
   readID env
 
 -- | clears the IDChan
@@ -86,7 +86,7 @@ readUD env = do
 
 -- | selects a new window
 hsSelectWin ∷ Env → String → Lua.Lua ()
-hsSelectWin env name = Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadState $ LSCSelectWin name
+hsSelectWin env name = Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadState $ LSCSelectWin $ ID name
 
 -- | returns a random ID
 hsNewID ∷ Env → Lua.Lua String
@@ -99,7 +99,7 @@ hsNewID env = do
 hsNewTile ∷ Env → Double → Double → Double → Double → String → String → Lua.Lua String
 hsNewTile env x y w h win t = do
   clearID env
-  Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew $ LCTile win (TilePos (x,y) (w,h)) t
+  Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew $ LCTile (ID win) (TilePos (x,y) (w,h)) t
   readID env
 
 -- | creates a new tile
@@ -107,7 +107,7 @@ hsNewAtlas ∷ Env → Double → Double → Double → Double → String
            → String → Int → Int → Lua.Lua String
 hsNewAtlas env x y w h win t tx ty = do
   clearID env
-  Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew $ LCAtlas win (TilePos (x,y) (w,h)) t (tx,ty)
+  Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew $ LCAtlas (ID win) (TilePos (x,y) (w,h)) t (tx,ty)
   readID env
 
 -- | create a new section of text
@@ -116,7 +116,7 @@ hsNewText ∷ Env → Double → Double → Double → Double
 hsNewText env x y w h win font text = do
   clearID env
   Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew
-             $ LCText win $ Text IDNULL (x,y) (w,h) (ID font) text
+             $ LCText (ID win) $ Text IDNULL (x,y) (w,h) (ID font) text
   readID env
 
 -- | create a new button
@@ -125,10 +125,8 @@ hsNewLink ∷ Env → Double → Double → Double → Double
 hsNewLink env x y w h win font text link = do
   clearID env
   Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew
-             $ LCButton win (Text IDNULL (x,y) (w,h) (ID font) text) (BFLink (ID link))
+             $ LCButton (ID win) (Text IDNULL (x,y) (w,h) (ID font) text) (BFLink (ID link))
   id0 ← readID env
-  Lua.liftIO $ writeQueue'' env InputQueue $ QCInpCmd $ InpState
-    $ ISCNewElem $ IEButt $ Button ButtFuncLink (x,y) (w,h)
   return id0
 
 -- | starts the lua thread

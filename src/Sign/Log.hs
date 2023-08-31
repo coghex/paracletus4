@@ -174,7 +174,11 @@ sendCapture ∷ (MonadLog μ, MonadFail μ) ⇒ Capture → μ ()
 sendCapture capture = do
   (Log _   env _   _   _) ← askLog
   liftIO $ writeQueue'' env InputQueue $ QCInpCmd $ InpState $ ISCCapture capture
-
+-- | sends a new input elem to the input queue
+sendInputElem ∷ (MonadLog μ, MonadFail μ) ⇒ InputElem → μ ()
+sendInputElem elem = do
+  (Log _   env _   _   _) ← askLog
+  liftIO $ writeQueue'' env InputQueue $ QCInpCmd $ InpState $ ISCNewElem $ elem
 -- | sends a syscommand over the event queue
 sendSys ∷ (MonadLog μ, MonadFail μ) ⇒ SysAction → μ ()
 sendSys sa = do

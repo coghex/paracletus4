@@ -45,14 +45,16 @@ data Event = EventError !GLFW.Error !String -- GLFW specific
 -- | possible commands load thread can handle
 data LoadCmd = LoadNew LoadChunk | LoadShell ShellCmd | LoadTimer TimerName
              | LoadState LoadStateChange | LoadReload | LoadRecreate | LoadTest
-             | LoadID | LoadGet GetCommand
+             | LoadID | LoadGet GetCommand | LoadInput LoadInputCmd
              | LoadCmdNULL deriving (Show, Eq)
+-- | possible input coming to the load thread from the input thread
+data LoadInputCmd = LIButton Button | LINULL deriving (Show, Eq)
 -- | possible new data that can be made in the load thread
-data LoadChunk = LCWindow String
-               | LCText String Text
-               | LCTile String TilePos String
-               | LCAtlas String TilePos String (Int,Int)
-               | LCButton String Text ButtonFunc
+data LoadChunk = LCWindow ID
+               | LCText ID Text
+               | LCTile ID TilePos String
+               | LCAtlas ID TilePos String (Int,Int)
+               | LCButton ID Text ButtonFunc
                | LCNULL deriving (Show, Eq)
 -- | possible data user can request from the load thread
 data GetCommand = GCWindow
@@ -63,7 +65,7 @@ data InpCmd  = InpEvent InputEvent | InpState InputStateChange
 
 -- | possible changes to the load state
 data LoadStateChange = LSCRegisterTileMap String | LSCRegisterTextureMap String
-                     | LSCSelectWin String | LSCSetGLFWWindow GLFW.Window
+                     | LSCSelectWin ID | LSCSetGLFWWindow GLFW.Window
                      | LSCNULL deriving (Show, Eq)
 -- | possible names of timers
 data TimerName = ShellCursorTimer | NULLTimer deriving (Show, Eq)
@@ -100,12 +102,9 @@ data InputState = InputState { keyMap     ∷ KeyMap
 -- | various window elems have a corresponding input elem
 data InputElem = IEButt Button | IENULL deriving (Show, Eq)
 -- | button input information
-data Button = Button { bFunc ∷ ButtFunc
+data Button = Button { bFunc ∷ ButtonFunc
                      , bPos  ∷ (Double,Double)
                      , bSize ∷ (Double,Double) } deriving (Show, Eq)
--- | button functions
-data ButtFunc = ButtFuncLink | ButtFuncNULL deriving (Show, Eq)
-
 -- | the type of captured input
 data Capture = CaptureShell | CaptureNULL deriving (Show, Eq)
 

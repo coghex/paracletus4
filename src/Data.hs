@@ -11,7 +11,7 @@ import qualified Graphics.UI.GLFW as GLFW
 type Stack α = [α]
 
 -- | ids are just strings
-data ID = ID { id ∷ String } | IDNULL deriving (Show, Eq)
+data ID = ID { id ∷ String } | IDNULL deriving (Show, Eq, Ord)
 
 -- | generic 0-255 rgba structure
 data Color = Color Int Int Int Int deriving (Show, Eq)

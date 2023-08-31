@@ -38,15 +38,15 @@ data DrawState = DrawState
   -- | each texture has a fp and size
   , dsTexMap    ∷ TextureMap
   -- | list of window objects
-  , dsWins      ∷ Map.Map String Window
+  , dsWins      ∷ Map.Map ID Window
   -- | current window
-  , dsCurr      ∷ String
+  , dsCurr      ∷ ID
   -- | the shell is completely seperate from all windowing
   , dsShell     ∷ Shell
   } deriving (Show, Eq)
 
 -- | windows contain elements that get converted to tiles and dyns
-data Window = Window { winTitle ∷ String
+data Window = Window { winID    ∷ ID
                      , winElems ∷ [WinElem]
                      } deriving (Show, Eq)
 -- | window elements define various things that can be interacted with

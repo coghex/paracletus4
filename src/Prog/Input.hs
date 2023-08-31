@@ -78,24 +78,24 @@ processInputQueue env is = do
 
 -- | processes input commands, which can be mouse clicks, keys, or state changes
 processInput ∷ Env → InputState → InpCmd → IO EventResult
-processInput env is (InpEvent (InputKey win key k ks mk))       = do
+processInput env is (InpEvent (InputKey _   key _ ks mk))       = do
   processKey env key ks mk is
   return EventResultSuccess
 processInput env is (InpEvent (InputMouseButton win mb mbs mk)) = do
-  processMouseButton env win mb mbs mk
-  return EventResultSuccess
+  is' ← processMouseButton env is win mb mbs mk
+  return $ EventResultInputState is'
 processInput env is (InpState (ISCRegisterKeys path))           = do
   log' env (LogDebug 1) "[Input] registering keys..."
   keyM ← readKeySettings env path
   let is' = is { keyMap = keyM }
   return $ EventResultInputState is'
-processInput env is (InpState (ISCCapture cap))                 = do
+processInput _   is (InpState (ISCCapture cap))                 = do
   let is' = is { keyCap = cap }
   return $ EventResultInputState is'
-processInput env is (InpState (ISCNewElem elem))                = do
-  let is' = is
+processInput _   is (InpState (ISCNewElem el))                = do
+  let is' = is { inputElems = el:inputElems is }
   return $ EventResultInputState is'
-processInput env _  inpCmd
+processInput _   _  inpCmd
   = return $ EventResultError $ "unknown command " ⧺ show inpCmd
 
 readKeySettings ∷ Env → String → IO KeyMap
@@ -141,9 +141,10 @@ createKeyMap (KeySettings kEscape kTest kShell) = km
         km2        = Map.insert KFShell  (GLFW.getGLFWKeys kShell)  km1
 
 initInputState ∷ InputState
-initInputState = InputState { keyMap  = KeyMap Map.empty
-                            , keyCap  = CaptureNULL
-                            , mouseSt = initMouseState }
+initInputState = InputState { keyMap     = KeyMap Map.empty
+                            , keyCap     = CaptureNULL
+                            , inputElems = []
+                            , mouseSt    = initMouseState }
 initMouseState ∷ MouseState
 initMouseState = MouseState { mouse1   = Nothing
                             , mouse2   = Nothing

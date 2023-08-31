@@ -20,12 +20,13 @@ import Load.Util ( emptyTiles )
 import Luau.Shell ( toggleShell, shTiles, processShellCommand, genStringTiles, positionShell )
 import Prog.Data
 import Prog.Buff ( generateDynData )
+import Prog.Mouse ( calcTextBoxSize )
 import Sign.Data
 import Sign.Log
 import Time ( processTimer )
 import Vulk.Calc ( calcVertices )
 import Vulk.Data ( Verts(Verts) )
-import Vulk.Font ( TTFData(..), Font(..), findFont, calcFontOffset )
+import Vulk.Font ( TTFData(..), Font(..), findFont, calcFontOffset, findFontData )
 import Util ( newID )
 import Control.Concurrent (threadDelay)
 import Control.Monad.IO.Class ( liftIO, MonadIO(..) )
@@ -124,7 +125,7 @@ processCommands ds = do
     Nothing → return ds
 
 -- | returns the tiles in the current window
-findTiles ∷ Int → [Font] → [[TTFData]] → String → Map.Map String Window → [Tile]
+findTiles ∷ Int → [Font] → [[TTFData]] → ID → Map.Map ID Window → [Tile]
 findTiles fontsize fonts ttfdata win wins = case Map.lookup win wins of
   Nothing → []
   Just w0 → generateWinTiles fontsize fonts ttfdata (winElems w0)
@@ -169,19 +170,19 @@ processCommand ds cmd = case cmd of
     sendTextures tm
     return $ LoadResultDrawState $ ds { dsTexMap = TextureMap tm }
   LoadState (LSCSelectWin name) → do
-    log' (LogDebug 1) $ "[Load] selecting win: " ⧺ name
+    log' (LogDebug 1) $ "[Load] selecting win: " ⧺ show name
     -- test to make sure window exists and not already selected
     let wins = dsWins ds
         curr = dsCurr ds
     case Map.lookup name wins of
       Just _ → if curr ≡ name then do
-          log' LogInfo $ "[Load] window " ⧺ name ⧺ " already selected"
+          log' LogInfo $ "[Load] window " ⧺ show name ⧺ " already selected"
           return LoadResultSuccess
         else
           return $ LoadResultDrawState $ ds { dsCurr = name
                                             , dsStatus = DSSRecreate }
       Nothing → do
-        log' LogWarn $ "[Load] window " ⧺ name ⧺ " doesnt exist in :" ⧺ show wins
+        log' LogWarn $ "[Load] window " ⧺ show name ⧺ " doesnt exist in :" ⧺ show wins
         return LoadResultSuccess
   LoadState (LSCSetGLFWWindow win) → do
     return $ LoadResultDrawState ds { dsWindow = Just win }
@@ -196,12 +197,35 @@ processCommand ds cmd = case cmd of
   LoadNew lc → newChunk ds lc
   LoadGet gc → getData ds gc
   LoadShell shcmd → processShellCommand ds shcmd
+  LoadInput input → processLoadInput ds input
   LoadTimer timer → processTimer ds timer
   LoadReload → do
     return $ LoadResultDrawState ds { dsStatus = DSSReload }
   LoadRecreate → do
     return $ LoadResultDrawState ds { dsStatus = DSSRecreate }
   _ → return LoadResultSuccess
+
+processLoadInput ∷ (MonadLog μ,MonadFail μ)
+  ⇒ DrawState → LoadInputCmd → LogT μ LoadResult
+processLoadInput ds (LIButton (Button func _ _)) = processLoadInputButtFunc ds func
+processLoadInput _  input           = do
+  return $ LoadResultError $ "[Load] unknown load input command " ⧺ show input
+processLoadInputButtFunc ∷ (MonadLog μ,MonadFail μ)
+  ⇒ DrawState → ButtonFunc → LogT μ LoadResult
+processLoadInputButtFunc ds (BFLink link) = do
+    -- test to make sure window exists and not already selected
+    let wins = dsWins ds
+        curr = dsCurr ds
+    case Map.lookup link wins of
+      Just _ → if curr ≡ link then do
+          log' LogInfo $ "[Load] window " ⧺ show link ⧺ " already selected"
+          return LoadResultSuccess
+        else
+          return $ LoadResultDrawState $ ds { dsCurr   = link
+                                            , dsStatus = DSSRecreate }
+processLoadInputButtFunc ds bf            = do
+  return $ LoadResultError $ "[Load] unknown button function " ⧺ show bf
+
 
 -- | returns requested data on the user data TVar,
 --   not all data is in the draw state so we have
@@ -216,7 +240,7 @@ newChunk ∷ (MonadLog μ,MonadFail μ) ⇒ DrawState → LoadChunk → LogT μ 
 newChunk ds (LCWindow name)            = do
   ID id0 ← liftIO newID
   writeIDTVar $ ID id0
-  return $ LoadResultDrawState $ ds { dsWins = Map.insert id0 (Window name []) (dsWins ds) }
+  return $ LoadResultDrawState $ ds { dsWins = Map.insert (ID id0) (Window name []) (dsWins ds) }
 newChunk ds (LCTile  win pos tex)      = do
   log' (LogDebug 1) $ "[Load] loading new tile to win " ⧺ show win
   id0 ← liftIO newID
@@ -237,30 +261,37 @@ newChunk ds (LCText win text) = do
   --let tile = Tile id0 (TilePos pos siz) $ TileTex (0,0) (1,1) (-10)
   writeIDTVar id0
   return $ LoadResultDrawState $ newText ds win text id0
-newChunk ds (LCButton win text buttfunc) = do
+newChunk ds (LCButton win (Text id (x,y) (w,h) font tx) buttfunc) = do
   id0 ← liftIO newID
   writeIDTVar id0
-  return $ LoadResultDrawState $ newButton ds win text id0 buttfunc
+  fonts ← readFonts
+  ttfdata ← readFontMapM
+  let fontdata = findFontData fonts font ttfdata
+      buttsize = calcTextBoxSize tx fontdata
+  -- the button size is dummy data, we let the input thread sort it out
+  sendInputElem $ IEButt $ Button buttfunc (x,y) buttsize
+  return $ LoadResultDrawState $ newButton ds win (Text id (x,y) (w,h) font tx)
+                                           id0 buttfunc
 newChunk _  LCNULL                     = return LoadResultSuccess
 newChunk _  lc                         = do
   log' LogWarn $ "[Load] unknown load chunk command " ⧺ show lc
   return LoadResultSuccess
 
 -- | adds a new tile to a window
-newTile ∷ DrawState → String → Tile → DrawState
+newTile ∷ DrawState → ID → Tile → DrawState
 newTile ds win tile =
   ds { dsWins = addElemToWin (dsWins ds) win (WinElemTile tile) }
 -- | adds a new text section to a window
-newText ∷ DrawState → String → Text → ID → DrawState
+newText ∷ DrawState → ID → Text → ID → DrawState
 newText ds win text id0 =
   ds { dsWins = addElemToWin (dsWins ds) win (WinElemText text') }
   where text' = text { textID = id0 }
 -- | adds a button to a window
-newButton ∷ DrawState → String → Text → ID → ButtonFunc → DrawState
+newButton ∷ DrawState → ID → Text → ID → ButtonFunc → DrawState
 newButton ds win text id0 buttfunc =
   ds { dsWins = addElemToWin (dsWins ds) win (WinElemButton text' buttfunc) }
   where text' = text { textID = id0 }
-addElemToWin ∷ Map.Map String Window → String → WinElem → Map.Map String Window
+addElemToWin ∷ Map.Map ID Window → ID → WinElem → Map.Map ID Window
 addElemToWin wins win elem = case Map.lookup win wins of
   Nothing → wins
   Just w0 → Map.insert win win' wins
@@ -311,7 +342,7 @@ createTextureAtlasMap n ((AtlasData name fp w h):tds)
 
 -- | initial draw state
 initDrawState ∷ DrawState
-initDrawState = DrawState DSSNULL Nothing (TextureMap []) Map.empty [] initShell
+initDrawState = DrawState DSSNULL Nothing (TextureMap []) Map.empty IDNULL initShell
 -- | creates a shell with empty values
 initShell ∷ Shell
 initShell = Shell "$> " Nothing 1 True "" "" "" "" False False (0,0) (0,0) (-1) []
