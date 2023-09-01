@@ -6,7 +6,7 @@ module Load.Data where
 -- data for the loading thread is found
 import Prelude()
 import UPrelude
-import Data ( ID, Shell )
+import Data ( ID, Shell, Color )
 import Data.Aeson
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -28,7 +28,8 @@ data TilePos = TilePos { tPos   ∷ (Double,Double)
 --   tT is the number in which it was loaded
 data TileTex = TileTex { tInd   ∷ (Int,Int)
                        , tSize  ∷ (Int,Int)
-                       , tT     ∷ Int } deriving (Show, Eq, Ord)
+                       , tT     ∷ Int
+                       , tColor ∷ Color } deriving (Show, Eq, Ord)
 
 -- | the state of the load thread
 data DrawState = DrawState
@@ -52,8 +53,10 @@ data Window = Window { winID    ∷ ID
 -- | window elements define various things that can be interacted with
 data WinElem = WinElemTile Tile
              | WinElemText Text
-             | WinElemButton Text ButtonFunc
+             | WinElemButton Text ID ButtonFunc ButtonState
              | WinElemNULL deriving (Show, Eq)
+-- | possible button states
+data ButtonState = BSSelected | BSNULL deriving (Show, Eq)
 -- | poossible button functions
 data ButtonFunc = BFLink ID | BFNULL deriving (Show, Eq)
 -- | defines a section of text

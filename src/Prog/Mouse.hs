@@ -6,6 +6,7 @@ module Prog.Mouse where
 import Prelude()
 import UPrelude
 import Data.List.Split ( splitOn )
+import Control.Monad ( when )
 import Prog.Data
 import Sign.Data
 import Sign.Util ( log', writeQueue'' )
@@ -17,8 +18,20 @@ processMouse ∷ Env → GLFW.Window → InputState → IO InputState
 processMouse env win is = do
   pos ← GLFW.getCursorPos win
   siz ← GLFW.getWindowSize win
-  let newms = (mouseSt is) { mousePos = pos }
+  let newms  = (mouseSt is) { mousePos = pos }
+      elems  = findElemsUnder pos' $ inputElems is
+      pos'   = normalizePos pos siz
+      elems' = pullOutButtons elems
+  when (length elems > 0) $
+    writeQueue'' env LoadQueue $ QCLoadCmd $ LoadInput
+      $ LIToggleButtons elems' True
   return is { mouseSt = newms }
+
+-- | takes a list of inputElems and gives back the buttons
+pullOutButtons ∷ [InputElem] → [Button]
+pullOutButtons []                  = []
+pullOutButtons ((IEButt butt):ies) = butt : pullOutButtons ies
+pullOutButtons (_:ies)             = pullOutButtons ies
 
 -- | processes mouse button clicks
 processMouseButton ∷ Env → InputState → GLFW.Window → GLFW.MouseButton
@@ -48,7 +61,7 @@ findElemsUnder pos (e:es)
 
 -- | returns true if the element is under the position
 elemUnder ∷ (Double,Double) → InputElem → Bool
-elemUnder (mx,my) (IEButt (Button _ (x,y) (w,h)))
+elemUnder (mx,my) (IEButt (Button _ _ (x,y) (w,h)))
   = (abs(mx - x - 1.5) < w)
   ∧ (abs(my - y) < (0.5*h))
 elemUnder _     IENULL                      = False

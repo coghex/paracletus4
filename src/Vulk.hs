@@ -85,7 +85,7 @@ import Vulk.VulkLoad ( loadVulkanTextures )
 import Vulk.VulkGLFW ( glfwWaitEventsMeanwhile, getCurTick, loadLoop
                      , initGLFWWindow, glfwMainLoop )
 import qualified Vulk.GLFW as GLFW
-import Util ( newID )
+import Util ( newID, blackColor )
 
 runVulk ∷ HasCallStack ⇒ Prog ε σ ()
 runVulk = do
@@ -368,7 +368,7 @@ genCommandBuffs dev pdev commandPool queues graphicsPipeline renderPass
             (w,h) = (fromIntegral w'/64.0,fromIntegral h'/64.0)
             tiles = [Tile IDNULL (TilePos (0,0)
                                  (fromIntegral w',fromIntegral h'))
-                                 (TileTex (0,0) (1,1) 0)]
+                                 (TileTex (0,0) (1,1) 0 blackColor)]
             dyns  = generateDynData tiles
         modifyTVar env DynsTVar $ TVDyns dyns
         modifyTVar env VertsTVar $ TVVerts $ Verts res

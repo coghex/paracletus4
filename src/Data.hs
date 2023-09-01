@@ -14,7 +14,7 @@ type Stack α = [α]
 data ID = ID { id ∷ String } | IDNULL deriving (Show, Eq, Ord)
 
 -- | generic 0-255 rgba structure
-data Color = Color Int Int Int Int deriving (Show, Eq)
+data Color = Color Int Int Int Int deriving (Show, Eq, Ord)
 
 -- | cardinal directions
 data Cardinal = North | South | West | East

@@ -13,11 +13,11 @@ import Data ( PrintArg(PrintNULL), Color(..), ID(..), Shell(..) )
 import Data.Aeson as A
 import Data.Maybe ( fromMaybe )
 import Data.List.Split ( splitOn )
-import Data.Map as Map
+import qualified Data.Map as Map
 import Data.String ( fromString )
 import Load.Data
-import Load.Util ( emptyTiles )
-import Luau.Shell ( toggleShell, shTiles, processShellCommand, genStringTiles, positionShell )
+import Load.Util ( emptyTiles, boxTiles, genStringTiles )
+import Luau.Shell ( toggleShell, shTiles, processShellCommand, positionShell, genShellStr )
 import Prog.Data
 import Prog.Buff ( generateDynData )
 import Prog.Mouse ( calcTextBoxSize )
@@ -27,7 +27,7 @@ import Time ( processTimer )
 import Vulk.Calc ( calcVertices )
 import Vulk.Data ( Verts(Verts) )
 import Vulk.Font ( TTFData(..), Font(..), findFont, calcFontOffset, findFontData )
-import Util ( newID )
+import Util ( newID, blackColor, greenColor )
 import Control.Concurrent (threadDelay)
 import Control.Monad.IO.Class ( liftIO, MonadIO(..) )
 import Data.Time.Clock (diffUTCTime, getCurrentTime)
@@ -91,8 +91,8 @@ processCommands ds = do
                 dyns  = generateDynData tiles
                 shell = shTiles fontsize (head ttfdata) shdat
             modifyTVar DynsTVar $ TVDyns dyns
-            log' (LogDebug 1) $ "[Load] ***regenerating dyns: "
-                              ⧺ show (length tiles)
+            --log' (LogDebug 1) $ "[Load] ***regenerating dyns: "
+            --                  ⧺ show (length tiles)
             if length olddyns ≠ length dyns then do
               let verts = Verts $ calcVertices $ reverse tiles
               modifyTVar VertsTVar $ TVVerts verts
@@ -137,8 +137,8 @@ generateWinTiles fontsize fonts ttfdata (we:wes)
   where tiles = generateElemTiles fontsize fonts ttfdata we
 generateElemTiles ∷ Int → [Font] → [[TTFData]] → WinElem → [Tile]
 generateElemTiles fontsize _     _       (WinElemTile tile) = [tile']
-  where Tile id0 tp (TileTex tind tsiz t) = tile
-        tile'                             = Tile id0 tp (TileTex tind tsiz (t + fontsize))
+  where Tile id0 tp (TileTex tind tsiz t c) = tile
+        tile' = Tile id0 tp (TileTex tind tsiz (t + fontsize) c)
 generateElemTiles _        fonts ttfdata (WinElemText text)
   = case findFont fonts id0 of
     Nothing → []
@@ -148,16 +148,24 @@ generateElemTiles _        fonts ttfdata (WinElemText text)
     where pos = textPos text
           id0 = textFont text 
           siz = textSize text
-generateElemTiles _        fonts ttfdata (WinElemButton text _)
+generateElemTiles fontsize fonts ttfdata (WinElemButton text buttid _ v)
   = case findFont fonts id0 of
     Nothing → []
-    Just font0 → genStringTiles fontsize' fd (fst pos) pos siz $ textString text
-                   where fd = ttfdata !! fontIndex font0
+    Just font0 → genStringTiles fontsize' fd (fst pos)
+                                pos siz (textString text)
+                                ⧺ backTiles
+                   where fd        = ttfdata !! fontIndex font0
                          fontsize' = calcFontOffset fonts $ fontIndex font0
+                         backTiles = case v of
+                                       BSSelected → boxtiles
+                                       BSNULL     → emptyTiles (length boxtiles)
+                                                               fontsize
+                        -- TODO: unhardcode the 4
+                         boxtiles  = boxTiles fontsize pos' (0.25,0.25) (4,1) greenColor
     where pos = textPos text
           id0 = textFont text 
           siz = textSize text
-
+          pos' = (fst pos, snd pos + 0.5)
 generateElemTiles _        _     _       WinElemNULL        = []
 
 -- | this is the case statement for processing load commands
@@ -187,7 +195,7 @@ processCommand ds cmd = case cmd of
   LoadState (LSCSetGLFWWindow win) → do
     return $ LoadResultDrawState ds { dsWindow = Just win }
   LoadTest → do
-        sendTest
+        --sendTest
         return $ LoadResultDrawState $ ds { dsStatus = DSSRecreate }
   LoadID → do
     log' LogInfo "[Load] creating id..."
@@ -207,7 +215,11 @@ processCommand ds cmd = case cmd of
 
 processLoadInput ∷ (MonadLog μ,MonadFail μ)
   ⇒ DrawState → LoadInputCmd → LogT μ LoadResult
-processLoadInput ds (LIButton (Button func _ _)) = processLoadInputButtFunc ds func
+processLoadInput ds (LIButton (Button func _ _ _)) = processLoadInputButtFunc ds func
+processLoadInput ds (LIToggleButtons butts val)  = do
+  fontsize ← readFontSize
+  let ds' = toggleButtons ds fontsize butts val
+  return $ LoadResultDrawState ds'
 processLoadInput _  input           = do
   return $ LoadResultError $ "[Load] unknown load input command " ⧺ show input
 processLoadInputButtFunc ∷ (MonadLog μ,MonadFail μ)
@@ -226,6 +238,29 @@ processLoadInputButtFunc ds (BFLink link) = do
 processLoadInputButtFunc ds bf            = do
   return $ LoadResultError $ "[Load] unknown button function " ⧺ show bf
 
+toggleButtons ∷ DrawState → Int → [Button] → Bool → DrawState
+toggleButtons ds offset []           _   = ds
+toggleButtons ds offset (butt:butts) val = toggleButtons ds' offset butts val
+  where ds' = ds { dsWins   = Map.map (toggleButton offset butt val) (dsWins ds)
+                 , dsStatus = DSSReload }
+toggleButton ∷ Int → Button → Bool → Window → Window
+toggleButton offset butt val win = win
+  { winElems = toggleButtonInElems offset butt val (winElems win) }
+toggleButtonInElems ∷ Int → Button → Bool → [WinElem] → [WinElem]
+toggleButtonInElems offset butt val []     = []
+toggleButtonInElems offset butt val (e:es) = e' : toggleButtonInElems offset butt val es
+  where e' = toggleButtonInElem offset butt val e
+toggleButtonInElem ∷ Int → Button → Bool → WinElem → WinElem
+toggleButtonInElem offset (Button _ buttid _ _) val (WinElemButton text id0 buttfunc bs)
+  | buttid ≡ id0 = WinElemButton text id0 buttfunc
+                     $ if val then BSSelected else BSNULL
+  | otherwise    = WinElemButton text id0 buttfunc bs
+toggleButtonInElem _      _                     _   we = we
+
+--  where Button _ id0 pos size = butt
+--        newtile               = Tile id0 (TilePos (0,0) (1,1))
+--                                         (TileTex (0,0) (1,1) texInd)
+--        texInd                = 0
 
 -- | returns requested data on the user data TVar,
 --   not all data is in the draw state so we have
@@ -269,7 +304,7 @@ newChunk ds (LCButton win (Text id (x,y) (w,h) font tx) buttfunc) = do
   let fontdata = findFontData fonts font ttfdata
       buttsize = calcTextBoxSize tx fontdata
   -- the button size is dummy data, we let the input thread sort it out
-  sendInputElem $ IEButt $ Button buttfunc (x,y) buttsize
+  sendInputElem $ IEButt $ Button buttfunc id0 (x,y) buttsize
   return $ LoadResultDrawState $ newButton ds win (Text id (x,y) (w,h) font tx)
                                            id0 buttfunc
 newChunk _  LCNULL                     = return LoadResultSuccess
@@ -289,7 +324,7 @@ newText ds win text id0 =
 -- | adds a button to a window
 newButton ∷ DrawState → ID → Text → ID → ButtonFunc → DrawState
 newButton ds win text id0 buttfunc =
-  ds { dsWins = addElemToWin (dsWins ds) win (WinElemButton text' buttfunc) }
+  ds { dsWins = addElemToWin (dsWins ds) win (WinElemButton text' id0 buttfunc BSNULL) }
   where text' = text { textID = id0 }
 addElemToWin ∷ Map.Map ID Window → ID → WinElem → Map.Map ID Window
 addElemToWin wins win elem = case Map.lookup win wins of
@@ -299,14 +334,14 @@ addElemToWin wins win elem = case Map.lookup win wins of
 
 -- | converts tex to tiletex at input tex n
 findTex ∷ String → [(String,Tex)] → TileTex
-findTex _ [] = TileTex (0,0) (1,1) 0
+findTex _ [] = TileTex (0,0) (1,1) 0 blackColor
 findTex n ((name,Tex _ ind siz):texs)
-  | n ≡ name  = TileTex (0,0) siz ind
+  | n ≡ name  = TileTex (0,0) siz ind blackColor
   | otherwise = findTex n texs
 findAtlas ∷ (Int,Int) → String → [(String,Tex)] → TileTex
-findAtlas _    _ [] = TileTex (0,0) (1,1) 0
+findAtlas _    _ [] = TileTex (0,0) (1,1) 0 blackColor
 findAtlas tind n ((name,Tex _ ind siz):texs)
-  | n ≡ name  = TileTex tind siz ind
+  | n ≡ name  = TileTex tind siz ind blackColor
   | otherwise = findAtlas tind n texs
 
 -- | reads the texture data file

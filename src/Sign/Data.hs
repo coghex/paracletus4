@@ -48,7 +48,8 @@ data LoadCmd = LoadNew LoadChunk | LoadShell ShellCmd | LoadTimer TimerName
              | LoadID | LoadGet GetCommand | LoadInput LoadInputCmd
              | LoadCmdNULL deriving (Show, Eq)
 -- | possible input coming to the load thread from the input thread
-data LoadInputCmd = LIButton Button | LINULL deriving (Show, Eq)
+data LoadInputCmd = LIButton Button | LIToggleButtons [Button] Bool
+                  | LINULL deriving (Show, Eq)
 -- | possible new data that can be made in the load thread
 data LoadChunk = LCWindow ID
                | LCText ID Text
@@ -103,6 +104,7 @@ data InputState = InputState { keyMap     ∷ KeyMap
 data InputElem = IEButt Button | IENULL deriving (Show, Eq)
 -- | button input information
 data Button = Button { bFunc ∷ ButtonFunc
+                     , bID   ∷ ID
                      , bPos  ∷ (Double,Double)
                      , bSize ∷ (Double,Double) } deriving (Show, Eq)
 -- | the type of captured input
