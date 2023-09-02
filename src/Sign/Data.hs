@@ -49,6 +49,7 @@ data LoadCmd = LoadNew LoadChunk | LoadShell ShellCmd | LoadTimer TimerName
              | LoadCmdNULL deriving (Show, Eq)
 -- | possible input coming to the load thread from the input thread
 data LoadInputCmd = LIButton Button | LIToggleButtons [Button] Bool
+                  | LIClearButtons
                   | LINULL deriving (Show, Eq)
 -- | possible new data that can be made in the load thread
 data LoadChunk = LCWindow ID

@@ -220,6 +220,10 @@ processLoadInput ds (LIToggleButtons butts val)  = do
   fontsize ← readFontSize
   let ds' = toggleButtons ds fontsize butts val
   return $ LoadResultDrawState ds'
+processLoadInput ds LIClearButtons  = do
+  return $ LoadResultDrawState ds'
+    where ds' = ds { dsWins   = clearButtons (dsWins ds)
+                   , dsStatus = DSSReload }
 processLoadInput _  input           = do
   return $ LoadResultError $ "[Load] unknown load input command " ⧺ show input
 processLoadInputButtFunc ∷ (MonadLog μ,MonadFail μ)
@@ -238,6 +242,18 @@ processLoadInputButtFunc ds (BFLink link) = do
 processLoadInputButtFunc ds bf            = do
   return $ LoadResultError $ "[Load] unknown button function " ⧺ show bf
 
+-- | turns all buttons off
+clearButtons ∷ Map.Map ID Window → Map.Map ID Window
+clearButtons = Map.map clearButtonsInWins
+clearButtonsInWins ∷ Window → Window
+clearButtonsInWins win = win { winElems = clearButtonsInElems (winElems win) }
+clearButtonsInElems ∷ [WinElem] → [WinElem]
+clearButtonsInElems = map clearButtonsInElem
+clearButtonsInElem ∷ WinElem → WinElem
+clearButtonsInElem (WinElemButton txt id0 bf _) = WinElemButton txt id0 bf BSNULL
+clearButtonsInElem we = we
+
+-- | sets the designated buttons to the selected state
 toggleButtons ∷ DrawState → Int → [Button] → Bool → DrawState
 toggleButtons ds offset []           _   = ds
 toggleButtons ds offset (butt:butts) val = toggleButtons ds' offset butts val
@@ -254,7 +270,7 @@ toggleButtonInElem ∷ Int → Button → Bool → WinElem → WinElem
 toggleButtonInElem offset (Button _ buttid _ _) val (WinElemButton text id0 buttfunc bs)
   | buttid ≡ id0 = WinElemButton text id0 buttfunc
                      $ if val then BSSelected else BSNULL
-  | otherwise    = WinElemButton text id0 buttfunc bs
+  | otherwise    = WinElemButton text id0 buttfunc BSNULL
 toggleButtonInElem _      _                     _   we = we
 
 --  where Button _ id0 pos size = butt

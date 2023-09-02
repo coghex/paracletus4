@@ -22,9 +22,10 @@ processMouse env win is = do
       elems  = findElemsUnder pos' $ inputElems is
       pos'   = normalizePos pos siz
       elems' = pullOutButtons elems
-  when (length elems > 0) $
+  if length elems > 0 then
     writeQueue'' env LoadQueue $ QCLoadCmd $ LoadInput
       $ LIToggleButtons elems' True
+  else writeQueue'' env LoadQueue $ QCLoadCmd $ LoadInput LIClearButtons
   return is { mouseSt = newms }
 
 -- | takes a list of inputElems and gives back the buttons
