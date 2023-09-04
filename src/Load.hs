@@ -15,8 +15,10 @@ import Data.Maybe ( fromMaybe )
 import Data.List.Split ( splitOn )
 import qualified Data.Map as Map
 import Data.String ( fromString )
+import Game.Data ( World(..) )
+import Game.World ( newWorld, generateWorldData, generateWorldTiles )
 import Load.Data
-import Load.Util ( emptyTiles, boxTiles, genStringTiles )
+import Load.Util
 import Luau.Shell ( toggleShell, shTiles, processShellCommand, positionShell, genShellStr )
 import Prog.Data
 import Prog.Buff ( generateDynData )
@@ -87,7 +89,10 @@ processCommands ds = do
             olddyns ← readTVar DynsTVar
             shdat ← positionShell (dsWindow ds') (dsShell ds')
             let tiles = shell ⧺ wins
-                wins  = findTiles fontsize fonts ttfdata (dsCurr ds') (dsWins ds')
+                wins  = if length fonts > 0 then
+                              findTiles (dsLoad ds) fontsize (dsTexMap ds)
+                                        fonts ttfdata (dsCurr ds') (dsWins ds')
+                        else []
                 dyns  = generateDynData tiles
                 shell = shTiles fontsize (head ttfdata) shdat
             modifyTVar DynsTVar $ TVDyns dyns
@@ -106,7 +111,10 @@ processCommands ds = do
             -- TODO: find why we need to reverse this
             let verts = Verts $ calcVertices $ reverse tiles
                 tiles = shell ⧺ wins
-                wins  = findTiles fontsize fonts ttfdata (dsCurr ds') (dsWins ds')
+                wins  = if length fonts > 0 then
+                              findTiles (dsLoad ds) fontsize (dsTexMap ds)
+                                        fonts ttfdata (dsCurr ds') (dsWins ds')
+                        else []
                 dyns  = generateDynData tiles
                 shell = shTiles fontsize (head ttfdata) shdat
             modifyTVar VertsTVar $ TVVerts verts
@@ -125,21 +133,32 @@ processCommands ds = do
     Nothing → return ds
 
 -- | returns the tiles in the current window
-findTiles ∷ Int → [Font] → [[TTFData]] → ID → Map.Map ID Window → [Tile]
-findTiles fontsize fonts ttfdata win wins = case Map.lookup win wins of
-  Nothing → []
-  Just w0 → generateWinTiles fontsize fonts ttfdata (winElems w0)
+findTiles ∷ LoadState → Int → TextureMap → [Font] → [[TTFData]] → ID → Map.Map ID Window → [Tile]
+findTiles loaded fontsize texmap fonts ttfdata win wins = case Map.lookup win wins of
+                          Nothing → []
+                          Just w0 → generateWinTiles fontsize texmap fonts
+                                                     ttfdata (winElems w0)
+
+ -- | loaded ≡ Loading = genStringTiles fontsize fd (fst pos) pos (2,2) "loading..."
+ -- | loaded ≡ Loaded  = case Map.lookup win wins of
+ --                          Nothing → []
+ --                          Just w0 → generateWinTiles fontsize texmap fonts
+ --                                                     ttfdata (winElems w0)
+ -- | otherwise        = []
+ --       where pos   = (0,0)
+ --             fd    = ttfdata !! fontIndex font0
+ --             font0 = head fonts
 -- | returns the tiles in a list of elements
-generateWinTiles ∷ Int → [Font] → [[TTFData]] → [WinElem] → [Tile]
-generateWinTiles _        _     _       []       = []
-generateWinTiles fontsize fonts ttfdata (we:wes)
-  = tiles ⧺ generateWinTiles fontsize fonts ttfdata wes
-  where tiles = generateElemTiles fontsize fonts ttfdata we
-generateElemTiles ∷ Int → [Font] → [[TTFData]] → WinElem → [Tile]
-generateElemTiles fontsize _     _       (WinElemTile tile) = [tile']
+generateWinTiles ∷ Int → TextureMap → [Font] → [[TTFData]] → [WinElem] → [Tile]
+generateWinTiles _        _      _     _       []       = []
+generateWinTiles fontsize texmap fonts ttfdata (we:wes)
+  = tiles ⧺ generateWinTiles fontsize texmap fonts ttfdata wes
+  where tiles = generateElemTiles fontsize texmap fonts ttfdata we
+generateElemTiles ∷ Int → TextureMap → [Font] → [[TTFData]] → WinElem → [Tile]
+generateElemTiles fontsize texmap _     _       (WinElemTile tile) = [tile']
   where Tile id0 tp (TileTex tind tsiz t c) = tile
         tile' = Tile id0 tp (TileTex tind tsiz (t + fontsize) c)
-generateElemTiles _        fonts ttfdata (WinElemText text)
+generateElemTiles _        texmap fonts ttfdata (WinElemText text)
   = case findFont fonts id0 of
     Nothing → []
     Just font0 → genStringTiles fontsize' fd (fst pos) pos siz $ textString text
@@ -148,7 +167,7 @@ generateElemTiles _        fonts ttfdata (WinElemText text)
     where pos = textPos text
           id0 = textFont text 
           siz = textSize text
-generateElemTiles fontsize fonts ttfdata (WinElemButton text buttid _ v)
+generateElemTiles fontsize texmap fonts ttfdata (WinElemButton text buttid _ v)
   = case findFont fonts id0 of
     Nothing → []
     Just font0 → genStringTiles fontsize' fd (fst pos)
@@ -166,7 +185,9 @@ generateElemTiles fontsize fonts ttfdata (WinElemButton text buttid _ v)
           id0 = textFont text 
           siz = textSize text
           pos' = (fst pos, snd pos + 0.5)
-generateElemTiles _        _     _       WinElemNULL        = []
+generateElemTiles fontsize texmap fonts ttfdate (WinElemWorld world) =
+  generateWorldTiles fontsize world texmap
+generateElemTiles _        texmap _     _       WinElemNULL        = []
 
 -- | this is the case statement for processing load commands
 processCommand ∷ (MonadLog μ,MonadFail μ)
@@ -195,8 +216,9 @@ processCommand ds cmd = case cmd of
   LoadState (LSCSetGLFWWindow win) → do
     return $ LoadResultDrawState ds { dsWindow = Just win }
   LoadTest → do
-        --sendTest
-        return $ LoadResultDrawState $ ds { dsStatus = DSSRecreate }
+        sendTest
+        return $ LoadResultDrawState $ ds { dsStatus = DSSRecreate
+                                          , dsLoad   = Loaded }
   LoadID → do
     log' LogInfo "[Load] creating id..."
     ID id0 ← liftIO newID
@@ -207,6 +229,9 @@ processCommand ds cmd = case cmd of
   LoadShell shcmd → processShellCommand ds shcmd
   LoadInput input → processLoadInput ds input
   LoadTimer timer → processTimer ds timer
+  LoadGen win → do
+    wd ← generateWindowData ds win
+    return $ LoadResultDrawState wd
   LoadReload → do
     return $ LoadResultDrawState ds { dsStatus = DSSReload }
   LoadRecreate → do
@@ -236,11 +261,27 @@ processLoadInputButtFunc ds (BFLink link) = do
       Just _ → if curr ≡ link then do
           log' LogInfo $ "[Load] window " ⧺ show link ⧺ " already selected"
           return LoadResultSuccess
-        else
+        else do
+          sendGenerateWindowData link
           return $ LoadResultDrawState $ ds { dsCurr   = link
                                             , dsStatus = DSSRecreate }
+      Nothing → return $ LoadResultError $ "no window " ⧺ show link
 processLoadInputButtFunc ds bf            = do
   return $ LoadResultError $ "[Load] unknown button function " ⧺ show bf
+
+-- | generates any data a window might need when switched to
+sendGenerateWindowData ∷ (MonadLog μ,MonadFail μ) ⇒ ID → LogT μ ()
+sendGenerateWindowData win = sendLoadCmd $ LoadGen win
+generateWindowData ∷ (MonadLog μ,MonadFail μ) ⇒ DrawState → ID → LogT μ DrawState
+generateWindowData ds win = do
+  let newWins = Map.adjust (generateWindowDataInWin) win (dsWins ds)
+  return ds { dsWins = newWins }
+generateWindowDataInWin ∷ Window → Window
+generateWindowDataInWin win = win { winElems = map generateWinElemData (winElems win) }
+generateWinElemData ∷ WinElem → WinElem
+generateWinElemData (WinElemWorld (World Nothing))
+  = WinElemWorld $ World $ Just $ generateWorldData (2,2)
+generateWinElemData we = we
 
 -- | turns all buttons off
 clearButtons ∷ Map.Map ID Window → Map.Map ID Window
@@ -304,7 +345,7 @@ newChunk ds (LCAtlas win pos tex tind) = do
   id0 ← liftIO newID
   let TextureMap tm = dsTexMap ds
       tile          = Tile id0 pos tt
-      tt            = findAtlas tind tex tm
+      tt            = findAtlas 0 tind tex tm
   writeIDTVar id0
   return $ LoadResultDrawState $ newTile ds win tile
 newChunk ds (LCText win text) = do
@@ -323,6 +364,8 @@ newChunk ds (LCButton win (Text id (x,y) (w,h) font tx) buttfunc) = do
   sendInputElem $ IEButt $ Button buttfunc id0 (x,y) buttsize
   return $ LoadResultDrawState $ newButton ds win (Text id (x,y) (w,h) font tx)
                                            id0 buttfunc
+newChunk ds (LCWorld win) = do
+  return $ LoadResultDrawState $ newWorld win ds
 newChunk _  LCNULL                     = return LoadResultSuccess
 newChunk _  lc                         = do
   log' LogWarn $ "[Load] unknown load chunk command " ⧺ show lc
@@ -342,24 +385,6 @@ newButton ∷ DrawState → ID → Text → ID → ButtonFunc → DrawState
 newButton ds win text id0 buttfunc =
   ds { dsWins = addElemToWin (dsWins ds) win (WinElemButton text' id0 buttfunc BSNULL) }
   where text' = text { textID = id0 }
-addElemToWin ∷ Map.Map ID Window → ID → WinElem → Map.Map ID Window
-addElemToWin wins win elem = case Map.lookup win wins of
-  Nothing → wins
-  Just w0 → Map.insert win win' wins
-    where win' = w0 { winElems = elem : winElems w0 }
-
--- | converts tex to tiletex at input tex n
-findTex ∷ String → [(String,Tex)] → TileTex
-findTex _ [] = TileTex (0,0) (1,1) 0 blackColor
-findTex n ((name,Tex _ ind siz):texs)
-  | n ≡ name  = TileTex (0,0) siz ind blackColor
-  | otherwise = findTex n texs
-findAtlas ∷ (Int,Int) → String → [(String,Tex)] → TileTex
-findAtlas _    _ [] = TileTex (0,0) (1,1) 0 blackColor
-findAtlas tind n ((name,Tex _ ind siz):texs)
-  | n ≡ name  = TileTex tind siz ind blackColor
-  | otherwise = findAtlas tind n texs
-
 -- | reads the texture data file
 readTextureMap ∷ (MonadLog μ, MonadFail μ)
  ⇒ String → LogT μ TextureMap
@@ -393,7 +418,9 @@ createTextureAtlasMap n ((AtlasData name fp w h):tds)
 
 -- | initial draw state
 initDrawState ∷ DrawState
-initDrawState = DrawState DSSNULL Nothing (TextureMap []) Map.empty IDNULL initShell
+initDrawState = DrawState DSSNULL Nothing (TextureMap [])
+                          Map.empty IDNULL initShell Loading
 -- | creates a shell with empty values
 initShell ∷ Shell
-initShell = Shell "$> " Nothing 1 True "" "" "" "" False False (0,0) (0,0) (-1) []
+initShell = Shell "$> " Nothing 1 True "" "" "" ""
+                  False False (0,0) (0,0) (-1) []

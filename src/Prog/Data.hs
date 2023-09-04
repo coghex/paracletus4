@@ -81,6 +81,7 @@ data State = State { stStatus   ∷ ProgExcept
                    , stStartT   ∷ !SystemTime
                    , stFPS      ∷ !FPS
                    , stTick     ∷ !(Maybe Double)
+                   , stCamera   ∷ !(Double,Double,Double)
                    }
 
 -- | defines some user alterable settings

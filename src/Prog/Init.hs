@@ -117,4 +117,5 @@ initState _   = do
                              , stFont      = []
                              , stStartT    = st
                              , stFPS       = FPS 60.0 60 True
-                             , stTick      = Nothing }
+                             , stTick      = Nothing
+                             , stCamera    = (0,0,-1) }

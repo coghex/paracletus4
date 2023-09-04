@@ -43,6 +43,11 @@ processEvent (QCEvent event) = case event of
       Nothing  → liftIO exitSuccess
   EventSys sysEvent    → log'' LogWarn $ "Unknown sysaction: " ⧺ show event
   EventLog level str   → logCommand level str
+  EventInput (InputMouseScroll _   _ y) → do
+    st ← get
+    let (cx,cy,cz) = stCamera st
+        cz'        = min -0.1 $ max -10 $ cz - (0.1*realToFrac y)
+    modify $ \s → s { stCamera = (cx,cy,cz') }
   EventInput inpEvent  → writeQueue' InputQueue $ QCInpCmd $ InpEvent inpEvent
   EventLoadFont font → modify $ \s → s { stFont   = stFont s ⧺ [font] }
   EventTextures texmap → do
@@ -50,7 +55,7 @@ processEvent (QCEvent event) = case event of
   EventGet gc → getData gc
   EventTest → do
     st ← get
-    logCommand LogInfo $ show $ stFont st
+    logCommand LogInfo $ show $ stCamera st
   _                   → log'' LogError $ "Unknown event: " ⧺ show event
 processEvent _               = return ()
 

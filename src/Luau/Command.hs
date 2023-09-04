@@ -169,3 +169,8 @@ hsGetWindowSize env = do
     _ → do
       luaEvent env $ EventLog LogError $ "[Luau] thats not a window size"
       return []
+
+-- | adds a world object to a window
+hsNewWorld ∷ Env → String → Lua.Lua ()
+hsNewWorld env win = Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew
+                                $ LCWorld (ID win)

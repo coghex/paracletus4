@@ -45,7 +45,7 @@ data Event = EventError !GLFW.Error !String -- GLFW specific
 -- | possible commands load thread can handle
 data LoadCmd = LoadNew LoadChunk | LoadShell ShellCmd | LoadTimer TimerName
              | LoadState LoadStateChange | LoadReload | LoadRecreate | LoadTest
-             | LoadID | LoadGet GetCommand | LoadInput LoadInputCmd
+             | LoadID | LoadGet GetCommand | LoadInput LoadInputCmd | LoadGen ID
              | LoadCmdNULL deriving (Show, Eq)
 -- | possible input coming to the load thread from the input thread
 data LoadInputCmd = LIButton Button | LIToggleButtons [Button] Bool
@@ -57,6 +57,7 @@ data LoadChunk = LCWindow ID
                | LCTile ID TilePos String
                | LCAtlas ID TilePos String (Int,Int)
                | LCButton ID Text ButtonFunc
+               | LCWorld ID
                | LCNULL deriving (Show, Eq)
 -- | possible data user can request from the load thread
 data GetCommand = GCWindow

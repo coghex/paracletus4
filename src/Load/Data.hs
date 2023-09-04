@@ -13,6 +13,7 @@ import qualified Data.Map as Map
 import Numeric.DataFrame ( Mat44f )
 import GHC.Generics
 import qualified Vulk.GLFW as GLFW
+import Game.Data ( World )
 
 -- | transformation matricies that apply to a tile
 data DynData = DynData { ddDataF ∷ Mat44f
@@ -44,7 +45,12 @@ data DrawState = DrawState
   , dsCurr      ∷ ID
   -- | the shell is completely seperate from all windowing
   , dsShell     ∷ Shell
+  -- | a variable to decide if we show a loading screen
+  , dsLoad      ∷ LoadState
   } deriving (Show, Eq)
+
+-- | the state of the load thread meaning whether we have loaded or not
+data LoadState = Loading | Loaded deriving (Show, Eq)
 
 -- | windows contain elements that get converted to tiles and dyns
 data Window = Window { winID    ∷ ID
@@ -54,6 +60,7 @@ data Window = Window { winID    ∷ ID
 data WinElem = WinElemTile Tile
              | WinElemText Text
              | WinElemButton Text ID ButtonFunc ButtonState
+             | WinElemWorld World
              | WinElemNULL deriving (Show, Eq)
 -- | possible button states
 data ButtonState = BSSelected | BSNULL deriving (Show, Eq)

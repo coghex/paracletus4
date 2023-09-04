@@ -199,6 +199,11 @@ sendGetCommand ∷ (MonadLog μ, MonadFail μ) ⇒ GetCommand → μ ()
 sendGetCommand gc = do
   (Log _   env _   _   _) ← askLog
   liftIO $ writeQueue'' env EventQueue $ QCEvent $ EventGet gc
+-- | sends a load command
+sendLoadCmd ∷ (MonadLog μ, MonadFail μ) ⇒ LoadCmd → μ ()
+sendLoadCmd lc = do
+  (Log _   env _   _   _) ← askLog
+  liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ lc
 -- | reads a tvar
 readTVar ∷ (MonadLog μ, MonadFail μ) ⇒ TVarName → μ (Maybe TVarValue)
 readTVar tvar = do

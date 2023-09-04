@@ -23,6 +23,8 @@ executable paracletus
                    Time
                    Vulk
                    Util
+                   Game.Data
+                   Game.World
                    Load.Data
                    Load.Util
                    Luau.Command

@@ -63,6 +63,7 @@ luauThread env = do
         Lua.registerHaskellFunction (fromString "rawSelectWin") (hsSelectWin    env)
         Lua.registerHaskellFunction (fromString "rawLoadFont")  (hsLoadFont     env)
         Lua.registerHaskellFunction (fromString "rawStart")     (hsStart        env)
+        Lua.registerHaskellFunction (fromString "rawNewWorld")  (hsNewWorld     env)
         Lua.registerHaskellFunction
           (fromString "rawGetWindowSize")              (hsGetWindowSize      env)
         Lua.registerHaskellFunction

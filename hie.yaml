@@ -30,6 +30,12 @@ cradle:
     - path: "src/Util.hs"
       component: "paracletus:exe:paracletus"
 
+    - path: "src/Game/Data.hs"
+      component: "paracletus:exe:paracletus"
+
+    - path: "src/Game/World.hs"
+      component: "paracletus:exe:paracletus"
+
     - path: "src/Load/Data.hs"
       component: "paracletus:exe:paracletus"
 

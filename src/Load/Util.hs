@@ -2,10 +2,11 @@ module Load.Util where
 
 import Prelude ()
 import Data ( ID(..), Color(..) )
+import qualified Data.Map as Map
 import Util ( blackColor )
 import Vulk.Font ( indexTTFData, TTFData(..), GlyphMetrics(..) )
 import UPrelude
-import Load.Data ( Tile(..), TilePos(..), TileTex(..) )
+import Load.Data
 
 -- creates a number of empty tiles
 emptyTiles ∷ Int → Int → [Tile]
@@ -81,3 +82,23 @@ genStringTiles fontsize ttfdata x0 (x,y) (w,h) (ch:str)   = case indexTTFData tt
             (w',h') = (w * realToFrac chW
                       ,h * realToFrac chH)
             chInd'  = chInd + fontsize
+
+-- | adds a winelem to the wins
+addElemToWin ∷ Map.Map ID Window → ID → WinElem → Map.Map ID Window
+addElemToWin wins win elem = case Map.lookup win wins of
+  Nothing → wins
+  Just w0 → Map.insert win win' wins
+    where win' = w0 { winElems = elem : winElems w0 }
+
+-- | converts tex to tiletex at input tex n
+findTex ∷ String → [(String,Tex)] → TileTex
+findTex _ [] = TileTex (0,0) (1,1) 0 blackColor
+findTex n ((name,Tex _ ind siz):texs)
+  | n ≡ name  = TileTex (0,0) siz ind blackColor
+  | otherwise = findTex n texs
+findAtlas ∷ Int → (Int,Int) → String → [(String,Tex)] → TileTex
+findAtlas offset _    _ [] = TileTex (0,0) (1,1) offset blackColor
+findAtlas offset tind n ((name,Tex _ ind siz):texs)
+  | n ≡ name  = TileTex tind siz (ind+offset) blackColor
+  | otherwise = findAtlas offset tind n texs
+

@@ -261,12 +261,12 @@ vulkLoop (VulkanLoopData (GQData pdev dev commandPool _) queues scsd0
         -- main loop runs draw loop and trans functions
         env ← ask
         dynData' ← readTVar' env DynsTVar
+        cam ← gets stCamera
         let dynData = case dynData' of
                          Nothing          → []
                          Just (TVDyns d0) → d0
                          Just _           → []
             nDynsData    = length dynData
-            cam = (0,0,-1)
             rdata = RenderData { dev
                                , swapInfo
                                , queues

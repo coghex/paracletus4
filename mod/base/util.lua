@@ -81,3 +81,6 @@ function game.getWindowSize()
     size = rawGetWindowSize()
     return size
 end
+function game.newWorld(str)
+    rawNewWorld(str)
+end
