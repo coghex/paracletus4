@@ -53,16 +53,14 @@ runInputLoop env win TStart s0 = do
   let diff  = diffUTCTime end start
       usecs = floor (toRational diff * 1000000) ∷ Int
       delay = 1000 - usecs
-  if delay > 0
-    then threadDelay delay
-    else return ()
+  when (delay > 0) $ threadDelay delay
   tsNew ← readChan' env InputChan
   case tsNew of
     Nothing  → runInputLoop env win TStart s2
     Just ts0 → runInputLoop env win ts0    s2
 runInputLoop _ _ _ _ = return ()
 
-processInputQueue ∷ Env → InputState → IO (InputState)
+processInputQueue ∷ Env → InputState → IO InputState
 processInputQueue env is = do
   rawInp ← tryReadInputQueue env
   case rawInp of

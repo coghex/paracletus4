@@ -134,20 +134,17 @@ processCommands ds = do
 
 -- | returns the tiles in the current window
 findTiles ∷ LoadState → Int → TextureMap → [Font] → [[TTFData]] → ID → Map.Map ID Window → [Tile]
-findTiles loaded fontsize texmap fonts ttfdata win wins = case Map.lookup win wins of
-                          Nothing → []
-                          Just w0 → generateWinTiles fontsize texmap fonts
-                                                     ttfdata (winElems w0)
-
- -- | loaded ≡ Loading = genStringTiles fontsize fd (fst pos) pos (2,2) "loading..."
- -- | loaded ≡ Loaded  = case Map.lookup win wins of
- --                          Nothing → []
- --                          Just w0 → generateWinTiles fontsize texmap fonts
- --                                                     ttfdata (winElems w0)
- -- | otherwise        = []
- --       where pos   = (0,0)
- --             fd    = ttfdata !! fontIndex font0
- --             font0 = head fonts
+findTiles loaded fontsize texmap fonts ttfdata win wins
+  | loaded ≡ Loading = genStringTiles fontsize' fd (fst pos) pos (2,2) "loading..."
+  | loaded ≡ Loaded  = case Map.lookup win wins of
+                           Nothing → []
+                           Just w0 → generateWinTiles fontsize texmap fonts
+                                                      ttfdata (winElems w0)
+  | otherwise        = []
+        where pos       = (0,0)
+              fd        = ttfdata !! fontIndex font0
+              font0     = head fonts
+              fontsize' = calcFontOffset fonts $ fontIndex font0
 -- | returns the tiles in a list of elements
 generateWinTiles ∷ Int → TextureMap → [Font] → [[TTFData]] → [WinElem] → [Tile]
 generateWinTiles _        _      _     _       []       = []
@@ -209,6 +206,7 @@ processCommand ds cmd = case cmd of
           return LoadResultSuccess
         else
           return $ LoadResultDrawState $ ds { dsCurr = name
+                                            --, dsLoad = Loading
                                             , dsStatus = DSSRecreate }
       Nothing → do
         log' LogWarn $ "[Load] window " ⧺ show name ⧺ " doesnt exist in :" ⧺ show wins
@@ -216,9 +214,10 @@ processCommand ds cmd = case cmd of
   LoadState (LSCSetGLFWWindow win) → do
     return $ LoadResultDrawState ds { dsWindow = Just win }
   LoadTest → do
-        sendTest
-        return $ LoadResultDrawState $ ds { dsStatus = DSSRecreate
-                                          , dsLoad   = Loaded }
+    sendTest
+    log' LogInfo $ "[Load] loaded: " ⧺ show (dsLoad ds)
+    return $ LoadResultDrawState $ ds { dsStatus = DSSRecreate
+                                      , dsLoad   = Loaded }
   LoadID → do
     log' LogInfo "[Load] creating id..."
     ID id0 ← liftIO newID
@@ -232,6 +231,7 @@ processCommand ds cmd = case cmd of
   LoadGen win → do
     wd ← generateWindowData ds win
     return $ LoadResultDrawState wd
+  LoadLoad → return $ LoadResultDrawState ds { dsLoad = Loaded }
   LoadReload → do
     return $ LoadResultDrawState ds { dsStatus = DSSReload }
   LoadRecreate → do
@@ -264,6 +264,7 @@ processLoadInputButtFunc ds (BFLink link) = do
         else do
           sendGenerateWindowData link
           return $ LoadResultDrawState $ ds { dsCurr   = link
+                                            , dsLoad   = Loading
                                             , dsStatus = DSSRecreate }
       Nothing → return $ LoadResultError $ "no window " ⧺ show link
 processLoadInputButtFunc ds bf            = do

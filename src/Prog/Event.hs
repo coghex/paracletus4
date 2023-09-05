@@ -55,7 +55,7 @@ processEvent (QCEvent event) = case event of
   EventGet gc → getData gc
   EventTest → do
     st ← get
-    logCommand LogInfo $ show $ stCamera st
+    logCommand LogInfo $ show $ stLoaded st
   _                   → log'' LogError $ "Unknown event: " ⧺ show event
 processEvent _               = return ()
 

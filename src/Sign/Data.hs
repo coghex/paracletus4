@@ -44,7 +44,7 @@ data Event = EventError !GLFW.Error !String -- GLFW specific
 
 -- | possible commands load thread can handle
 data LoadCmd = LoadNew LoadChunk | LoadShell ShellCmd | LoadTimer TimerName
-             | LoadState LoadStateChange | LoadReload | LoadRecreate | LoadTest
+             | LoadState LoadStateChange | LoadReload | LoadRecreate | LoadTest | LoadLoad
              | LoadID | LoadGet GetCommand | LoadInput LoadInputCmd | LoadGen ID
              | LoadCmdNULL deriving (Show, Eq)
 -- | possible input coming to the load thread from the input thread

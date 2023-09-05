@@ -305,6 +305,8 @@ vulkLoop (VulkanLoopData (GQData pdev dev commandPool _) queues scsd0
               else logExcept VulkError ExVulk "[Vulk] unknown drawFrame error" )
         -- some events must be processed in the parent thread
         processEvents
+        -- tell the load thead that we have finished drawing
+        writeQueue' LoadQueue $ QCLoadCmd LoadLoad
         -- simple fps counter
         seconds ← getTime
         cur ← liftIO $ atomically $ readTVar currentSec
