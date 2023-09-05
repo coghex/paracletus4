@@ -6,7 +6,9 @@ module Prog.Mouse where
 import Prelude()
 import UPrelude
 import Data.List.Split ( splitOn )
+import Data.Bifunctor ( bimap )
 import Control.Monad ( when )
+import Control.Monad.IO.Class ( MonadIO(..) )
 import Prog.Data
 import Sign.Data
 import Sign.Util ( log', writeQueue'' )
@@ -22,11 +24,22 @@ processMouse env win is = do
       elems  = findElemsUnder pos' $ inputElems is
       pos'   = normalizePos pos siz
       elems' = pullOutButtons elems
+  -- toggles button states
   if length elems > 0 then
     writeQueue'' env LoadQueue $ QCLoadCmd $ LoadInput
       $ LIToggleButtons elems' True
   else writeQueue'' env LoadQueue $ QCLoadCmd $ LoadInput LIClearButtons
-  return is { mouseSt = newms }
+  -- sends the mouse position to the main thread to move the camera
+  -- when the middle mouse button is pressed
+  case mouse3 newms of
+    Nothing    → return is { mouseSt = newms }
+    Just (x,y) → do
+      let (mx,my)   = pos'
+          (x',y')   = normalizePos (x,y) siz
+          (x'',y'') = (64*(mx - x'), 64*(my - y'))
+          newnewms  = newms { mouse3 = Just pos }
+      writeQueue'' env EventQueue $ QCEvent $ EventSys $ SysMoveCam (x'',y'',0)
+      return is { mouseSt = newnewms }
 
 -- | takes a list of inputElems and gives back the buttons
 pullOutButtons ∷ [InputElem] → [Button]
@@ -38,12 +51,29 @@ pullOutButtons (_:ies)             = pullOutButtons ies
 processMouseButton ∷ Env → InputState → GLFW.Window → GLFW.MouseButton
   → GLFW.MouseButtonState → GLFW.ModifierKeys → IO InputState
 processMouseButton env is win mb mbs mk = do
-  pos ← GLFW.getCursorPos win
-  siz ← GLFW.getWindowSize win
-  let elems = findElemsUnder pos' $ inputElems is
-      pos'  = normalizePos pos siz
-  sendClick env elems
-  return is
+  -- left mouse button
+  if mb ≡ GLFW.mousebutt1 then do
+    pos ← GLFW.getCursorPos win
+    siz ← GLFW.getWindowSize win
+    let elems = findElemsUnder pos' $ inputElems is
+        pos'  = normalizePos pos siz
+    sendClick env elems
+    return is
+  -- middle mouse button
+  else if mb ≡ GLFW.mousebutt3 then do
+    case mouse3 (mouseSt is) of
+      Nothing → if mbs ≡ GLFW.MouseButtonState'Pressed then do
+                  pos' ← liftIO $ GLFW.getCursorPos win
+                  let pos   = bimap realToFrac realToFrac pos'
+                  --    pos   = ((realToFrac (fst pos')),(realToFrac (snd pos')))
+                      newIS = is { mouseSt = (mouseSt is) { mouse3 = Just pos } }
+                  return newIS
+                else return is
+      Just _  → if mbs ≡ GLFW.MouseButtonState'Released then do
+                  let newIS = is { mouseSt = (mouseSt is) { mouse3 = Nothing } }
+                  return newIS
+                else return is
+  else return is
 
 -- | sends data to the load thread corresponding
 --   to the first input elem in the list

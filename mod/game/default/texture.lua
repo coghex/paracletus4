@@ -29,4 +29,4 @@ texm[4] = { name = "blankPage",fp = "dat/tex/blankpage.jpg" }
 texm[5] = { name = "nullTile",fp = "dat/tex/world/null.png" }
 
 atlasm = {}
-atlasm[1] = { name = "plainsTile",fp = "dat/tex/plains.png",w = 3, h = 4 }
+atlasm[1] = { name = "plainsTile",fp = "dat/tex/world/plains.png",w = 3, h = 4 }

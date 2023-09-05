@@ -284,8 +284,8 @@ generateWindowData ds win = do
 generateWindowDataInWin ∷ Window → Window
 generateWindowDataInWin win = win { winElems = map generateWinElemData (winElems win) }
 generateWinElemData ∷ WinElem → WinElem
-generateWinElemData (WinElemWorld (World Nothing))
-  = WinElemWorld $ World $ Just $ generateWorldData
+generateWinElemData (WinElemWorld (World Nothing curs))
+  = WinElemWorld $ World (Just (generateWorldData)) curs
 generateWinElemData we = we
 
 -- | turns all buttons off

@@ -33,28 +33,34 @@ processEvents = do
 --   since we want as little work as possible here
 processEvent ∷ QueueCmd → Prog ε σ ()
 processEvent (QCEvent event) = case event of
-  EventSys SysReload   → modify $ \s → s { stReload = RSReload }
-  EventSys SysRecreate → modify $ \s → s { stReload = RSRecreate }
-  EventSys SysResetCam → modify $ \s → s { stCamera = (0,0,-1) }
-  EventSys SysExit     → do
+  EventSys SysReload        → modify $ \s → s { stReload = RSReload }
+  EventSys SysRecreate      → modify $ \s → s { stReload = RSRecreate }
+  EventSys SysResetCam      → modify $ \s → s { stCamera = (0,0,-1) }
+  EventSys (SysMoveCam cam) → do
+    st ← get
+    let (cx,cy,cz) = stCamera st
+        (x,y,z)    = cam
+        newCam     = (cx+x,cy+y,cz+z)
+    modify $ \s → s { stCamera = newCam }
+  EventSys SysExit          → do
     logCommand (LogDebug 1) "[Vulk] quitting..."
     st ← get
     case stWindow st of
       Just win → liftIO $ GLFW.setWindowShouldClose win True
       Nothing  → liftIO exitSuccess
-  EventSys sysEvent    → log'' LogWarn $ "Unknown sysaction: " ⧺ show event
-  EventLog level str   → logCommand level str
+  EventSys sysEvent         → log'' LogWarn $ "Unknown sysaction: " ⧺ show event
+  EventLog level str        → logCommand level str
   EventInput (InputMouseScroll _   _ y) → do
     st ← get
     let (cx,cy,cz) = stCamera st
         cz'        = min -0.1 $ max -10 $ cz - (0.1*realToFrac y)
     modify $ \s → s { stCamera = (cx,cy,cz') }
-  EventInput inpEvent  → writeQueue' InputQueue $ QCInpCmd $ InpEvent inpEvent
-  EventLoadFont font → modify $ \s → s { stFont   = stFont s ⧺ [font] }
-  EventTextures texmap → do
+  EventInput inpEvent       → writeQueue' InputQueue $ QCInpCmd $ InpEvent inpEvent
+  EventLoadFont font        → modify $ \s → s { stFont   = stFont s ⧺ [font] }
+  EventTextures texmap      → do
     modify $ \s → s { stTextures = texmap }
-  EventGet gc → getData gc
-  EventTest → do
+  EventGet gc               → getData gc
+  EventTest                 → do
     st ← get
     logCommand LogInfo $ show $ stLoaded st
   _                   → log'' LogError $ "Unknown event: " ⧺ show event
