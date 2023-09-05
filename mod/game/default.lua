@@ -8,6 +8,7 @@ require "mod/game/default/texture"
 function initMod ()
     -- basic UI elements
     game.logDebug("default mod: initMod()")
+    game.setDebug("fps")
     initInput ()
     fonts = initTextures ()
     m = initMenu(fonts)

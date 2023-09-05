@@ -17,11 +17,12 @@ newWorld ∷ ID → DrawState → DrawState
 newWorld win ds = ds { dsWins = addElemToWin (dsWins ds) win (WinElemWorld world) }
   where world = World Nothing (0,0,0)
 
-generateWorldData ∷ [[WorldTile]]
-generateWorldData = replicate h (replicate w wt)
-  where wt = WorldTile WTPlains
-        w  = 10
-        h  = 10
+generateWorldData ∷ (Int,Int) → (Int,Int,Int) → [[WorldTile]]
+generateWorldData (ww,wh) curs = replicate len (replicate len wt)
+  where wt  = WorldTile WTPlains
+        w   = round $ realToFrac ww / 32.0
+        h   = round $ realToFrac wh / 32.0
+        len = max w h
 
 generateWorldTiles ∷ Int → World → TextureMap → [Tile]
 generateWorldTiles _      (World Nothing   _   ) _  = []
@@ -33,16 +34,21 @@ generateWorldTilesFunc _      _    _   []       _  = []
 generateWorldTilesFunc offset curs pos (wt:wts) tm
   = reverse (generateRowTiles offset curs pos wt tm)
   ⧺ generateWorldTilesFunc offset curs pos' wts tm
-    where pos' = (fst pos + 1, snd pos - 0.5)
+    where pos'      = (fst pos + 1 + cx', snd pos - 0.5 + cy')
+          (cx,cy,_) = curs
+          cx'       = realToFrac cx
+          cy'       = realToFrac cy
 generateRowTiles ∷ Int → (Int,Int,Int) → (Double,Double)
   → [WorldTile] → TextureMap → [Tile]
-generateRowTiles _      _    _   []       _  = []
-generateRowTiles offset curs pos (wt:wts) tm
-  = t : generateRowTiles offset curs pos' wts tm
+generateRowTiles _      _          _   []       _  = []
+generateRowTiles offset (cx,cy,cz) pos (wt:wts) tm
+  = t : generateRowTiles offset (cx,cy,cz) pos' wts tm
   where t    = Tile IDNULL (TilePos pos (1,1))
                            (worldTileTex offset wt tm)
                            (TileBhv True)
-        pos' = (fst pos + 1, snd pos + 0.5)
+        pos' = (fst pos + 1 + cx', snd pos + 0.5 + cy')
+        cx'  = realToFrac cx
+        cy'  = realToFrac cy
 worldTileTex ∷ Int → WorldTile → TextureMap → TileTex
 worldTileTex offset (WorldTile WTNULL)   tm'
   = findAtlas offset tind "nullTile" tm

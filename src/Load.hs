@@ -9,12 +9,13 @@ module Load where
 -- a thread to help recreate the swapchain
 import Prelude ()
 import UPrelude
-import Data ( PrintArg(PrintNULL), Color(..), ID(..), Shell(..) )
+import Data ( PrintArg(PrintNULL), Color(..), ID(..), Shell(..), FPS(..) )
 import Data.Aeson as A
 import Data.Maybe ( fromMaybe )
 import Data.List.Split ( splitOn )
 import qualified Data.Map as Map
 import Data.String ( fromString )
+import Data.Bifunctor ( bimap )
 import Game.Data ( World(..) )
 import Game.World ( newWorld, generateWorldData, generateWorldTiles )
 import Load.Data
@@ -29,7 +30,7 @@ import Time ( processTimer )
 import Vulk.Calc ( calcVertices )
 import Vulk.Data ( Verts(Verts) )
 import Vulk.Font ( TTFData(..), Font(..), findFont, calcFontOffset, findFontData )
-import Util ( newID, blackColor, greenColor )
+import Util ( newID, blackColor, greenColor, head', showFPS )
 import Control.Concurrent (threadDelay)
 import Control.Monad.IO.Class ( liftIO, MonadIO(..) )
 import Data.Time.Clock (diffUTCTime, getCurrentTime)
@@ -88,13 +89,16 @@ processCommands ds = do
             fonts ← readFonts
             olddyns ← readTVar DynsTVar
             shdat ← positionShell (dsWindow ds') (dsShell ds')
-            let tiles = shell ⧺ wins
+            debugpos ← positionDebug (dsWindow ds')
+            let tiles = debug ⧺ shell ⧺ wins
                 wins  = if length fonts > 0 then
                               findTiles (dsLoad ds) fontsize (dsTexMap ds)
                                         fonts ttfdata (dsCurr ds') (dsWins ds')
                         else []
                 dyns  = generateDynData tiles
                 shell = shTiles fontsize (head ttfdata) shdat
+                debug = genDebugTiles fontsize debugpos
+                                      (dsDebug ds) (head' ttfdata)
             modifyTVar DynsTVar $ TVDyns dyns
             --log' (LogDebug 1) $ "[Load] ***regenerating dyns: "
             --                  ⧺ show (length tiles)
@@ -108,15 +112,18 @@ processCommands ds = do
             ttfdata ← readFontMapM
             fonts ← readFonts
             shdat ← positionShell (dsWindow ds') (dsShell ds')
+            debugpos ← positionDebug (dsWindow ds')
             -- TODO: find why we need to reverse this
             let verts = Verts $ calcVertices $ reverse tiles
-                tiles = shell ⧺ wins
+                tiles = debug ⧺ shell ⧺ wins
                 wins  = if length fonts > 0 then
                               findTiles (dsLoad ds) fontsize (dsTexMap ds)
                                         fonts ttfdata (dsCurr ds') (dsWins ds')
                         else []
                 dyns  = generateDynData tiles
                 shell = shTiles fontsize (head ttfdata) shdat
+                debug = genDebugTiles fontsize debugpos
+                                      (dsDebug ds) (head' ttfdata)
             modifyTVar VertsTVar $ TVVerts verts
             modifyTVar DynsTVar $ TVDyns dyns
             sendSys SysRecreate
@@ -214,13 +221,24 @@ processCommand ds cmd = case cmd of
       Nothing → do
         log' LogWarn $ "[Load] window " ⧺ show name ⧺ " doesnt exist in :" ⧺ show wins
         return LoadResultSuccess
-  LoadState (LSCSetGLFWWindow win) → do
+  LoadState (LSCSetGLFWWindow win) →
     return $ LoadResultDrawState ds { dsWindow = Just win }
+  LoadState (LSCSetCamera cam) →
+    return $ LoadResultDrawState ds { dsCamera = cam }
+  LoadState (LSCSetDebugLevel dl) →
+    return $ LoadResultDrawState ds { dsDebug = dl }
+  LoadState (LSCSetFPS newfps) → case dsDebug ds of
+    DebugFPS _   → do
+      return
+      $ LoadResultDrawState ds { dsDebug  = DebugFPS newfps
+                               , dsStatus = DSSReload }
+    DebugNULL    → return LoadResultSuccess
   LoadTest → do
-    sendTest
-    log' LogInfo $ "[Load] loaded: " ⧺ show (dsLoad ds)
-    return $ LoadResultDrawState $ ds { dsStatus = DSSRecreate
-                                      , dsLoad   = Loaded }
+    --sendTest
+    log' LogInfo $ "[Load] ****** loaded: " ⧺ show (dsLoad ds)
+    return LoadResultSuccess
+    --return $ LoadResultDrawState $ ds { dsStatus = DSSRecreate
+    --                                  , dsLoad   = Loaded }
   LoadID → do
     log' LogInfo "[Load] creating id..."
     ID id0 ← liftIO newID
@@ -279,14 +297,16 @@ sendGenerateWindowData ∷ (MonadLog μ,MonadFail μ) ⇒ ID → LogT μ ()
 sendGenerateWindowData win = sendLoadCmd $ LoadGen win
 generateWindowData ∷ (MonadLog μ,MonadFail μ) ⇒ DrawState → ID → LogT μ DrawState
 generateWindowData ds win = do
-  let newWins = Map.adjust (generateWindowDataInWin) win (dsWins ds)
+  winSize ← liftIO $ getWinSize (dsWindow ds)
+  let newWins = Map.adjust (generateWindowDataInWin winSize) win (dsWins ds)
   return ds { dsWins = newWins }
-generateWindowDataInWin ∷ Window → Window
-generateWindowDataInWin win = win { winElems = map generateWinElemData (winElems win) }
-generateWinElemData ∷ WinElem → WinElem
-generateWinElemData (WinElemWorld (World Nothing curs))
-  = WinElemWorld $ World (Just (generateWorldData)) curs
-generateWinElemData we = we
+generateWindowDataInWin ∷ (Int,Int) → Window → Window
+generateWindowDataInWin winsize win
+  = win { winElems = map (generateWinElemData winsize) (winElems win) }
+generateWinElemData ∷ (Int,Int) → WinElem → WinElem
+generateWinElemData winsize (WinElemWorld (World Nothing curs))
+  = WinElemWorld $ World (Just (generateWorldData winsize curs)) curs
+generateWinElemData _       we = we
 
 -- | turns all buttons off
 clearButtons ∷ Map.Map ID Window → Map.Map ID Window
@@ -415,10 +435,27 @@ createTextureAtlasMap n ((AtlasData name fp w h):tds)
   = texdat : createTextureAtlasMap (n+1) tds
     where texdat = (name, Tex fp n (w,h))
 
+-- | generates the tiles requested for debugging
+genDebugTiles ∷ Int → (Double,Double) → DebugLevel → Maybe [TTFData] → [Tile]
+genDebugTiles offset pos (DebugFPS (FPS fps _ _)) (Just ttfdata)
+  = padTiles offset 3 $ genStringTiles 0 False ttfdata 0 pos (2,2) $ showFPS fps 3
+genDebugTiles offset _   _                        Nothing        = emptyTiles 3 offset
+genDebugTiles offset _   DebugNULL                _              = emptyTiles 3 offset
+
+-- | position of where debug info is
+positionDebug ∷ (MonadLog μ,MonadFail μ) ⇒ Maybe GLFW.Window → LogT μ (Double,Double)
+positionDebug win = case win of
+  Nothing → return (0,0)
+  Just w0 → do
+    (w,h) ← liftIO $ GLFW.getWindowSize w0
+    let (w',h') = bimap realToFrac realToFrac (w,h)
+    return (w' / 64 - 3.0,h' / 64 - 2.0)
+
 -- | initial draw state
 initDrawState ∷ DrawState
 initDrawState = DrawState DSSNULL Nothing (TextureMap [])
                           Map.empty IDNULL initShell Loading
+                          (0,0,-1) DebugNULL
 -- | creates a shell with empty values
 initShell ∷ Shell
 initShell = Shell "$> " Nothing 1 True "" "" "" ""

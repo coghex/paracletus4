@@ -3,7 +3,7 @@ module Sign.Data where
 -- data for the main event queue is defined
 import Prelude()
 import UPrelude
-import Data ( PrintArg(..), KeyMap(..), KeyFunc(..), ID(..) )
+import Data ( PrintArg(..), KeyMap(..), KeyFunc(..), ID(..), FPS(..) )
 import Load.Data
 import Luau.Data ( ShellCmd(..) )
 import Vulk.Data ( Verts(..) )
@@ -44,9 +44,9 @@ data Event = EventError !GLFW.Error !String -- GLFW specific
 
 -- | possible commands load thread can handle
 data LoadCmd = LoadNew LoadChunk | LoadShell ShellCmd | LoadTimer TimerName
-             | LoadState LoadStateChange | LoadReload | LoadRecreate | LoadTest | LoadLoad
+             | LoadState LoadStateChange | LoadReload | LoadRecreate | LoadLoad
              | LoadID | LoadGet GetCommand | LoadInput LoadInputCmd | LoadGen ID
-             | LoadCmdNULL deriving (Show, Eq)
+             | LoadTest | LoadCmdNULL deriving (Show, Eq)
 -- | possible input coming to the load thread from the input thread
 data LoadInputCmd = LIButton Button | LIToggleButtons [Button] Bool
                   | LIClearButtons
@@ -69,6 +69,8 @@ data InpCmd  = InpEvent InputEvent | InpState InputStateChange
 -- | possible changes to the load state
 data LoadStateChange = LSCRegisterTileMap String | LSCRegisterTextureMap String
                      | LSCSelectWin ID | LSCSetGLFWWindow GLFW.Window
+                     | LSCSetCamera (Double,Double,Double) | LSCSetDebugLevel DebugLevel
+                     | LSCSetFPS FPS
                      | LSCNULL deriving (Show, Eq)
 -- | possible names of timers
 data TimerName = ShellCursorTimer | NULLTimer deriving (Show, Eq)

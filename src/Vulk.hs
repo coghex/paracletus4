@@ -314,7 +314,9 @@ vulkLoop (VulkanLoopData (GQData pdev dev commandPool _) queues scsd0
           count ← liftIO $ atomically $ readTVar frameCount
           when (cur ≠ 0) $ do
             FPS fpsTarget _ display ← gets stFPS
-            modify $ \s → s { stFPS = FPS fpsTarget count display }
+            let fps = FPS fpsTarget count display
+            modify $ \s → s { stFPS = fps }
+            writeQueue' LoadQueue $ QCLoadCmd $ LoadState $ LSCSetFPS fps
           liftIO $ do
             atomically $ writeTVar currentSec (floor seconds)
             atomically $ writeTVar frameCount 0

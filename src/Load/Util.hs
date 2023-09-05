@@ -7,14 +7,22 @@ import Util ( blackColor )
 import Vulk.Font ( indexTTFData, TTFData(..), GlyphMetrics(..) )
 import UPrelude
 import Load.Data
+import qualified Vulk.GLFW as GLFW
 
--- creates a number of empty tiles
+-- | creates a number of empty tiles
 emptyTiles ∷ Int → Int → [Tile]
 emptyTiles n offset = take n $ repeat $ Tile IDNULL
                                              (TilePos (0,0) (4,4))
                                              (TileTex (0,0) (1,1) offset
                                              blackColor)
                                              (TileBhv False)
+
+-- | pads a list of tiles with empty tiles
+padTiles ∷ Int → Int → [Tile] → [Tile]
+padTiles offset n tiles
+  | length tiles < n = padding ⧺ tiles
+  | otherwise        = tiles
+      where padding = emptyTiles (n - length tiles) offset
 
 -- | creates a box
 boxTiles ∷ Int → (Double,Double) → (Double,Double)
@@ -114,3 +122,7 @@ findAtlas offset tind n ((name,Tex _ ind siz):texs)
   | n ≡ name  = TileTex tind siz (ind+offset) blackColor
   | otherwise = findAtlas offset tind n texs
 
+-- | gets the window size from the draw state's window variable
+getWinSize ∷ Maybe GLFW.Window → IO (Int,Int)
+getWinSize Nothing   = return (800,600)
+getWinSize (Just w0) = GLFW.getWindowSize w0

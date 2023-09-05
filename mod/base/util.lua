@@ -49,6 +49,9 @@ end
 function game.logError(str)
     logError(str)
 end
+function game.setDebug(str)
+    rawSetDebug(str)
+end
 function game.registerInputKeys(str)
     rawRegisterInputKeys(str)
 end

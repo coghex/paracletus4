@@ -7,7 +7,7 @@ import qualified HsLua as Lua
 import Data.List.Split (splitOn)
 import Data.Maybe ( fromMaybe )
 import Numeric ( readHex )
-import Data (ID(..))
+import Data (ID(..), FPS(..))
 import Util (newID)
 import Text.Read ( readMaybe )
 import Prog.Data
@@ -174,3 +174,13 @@ hsGetWindowSize env = do
 hsNewWorld ∷ Env → String → Lua.Lua ()
 hsNewWorld env win = Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew
                                 $ LCWorld (ID win)
+
+-- | sets the debug level of the window
+hsSetDebug ∷ Env → String → Lua.Lua ()
+hsSetDebug env "fps"  = Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd
+                                   $ LoadState $ LSCSetDebugLevel
+                                   $ DebugFPS $ FPS 0 0 False
+hsSetDebug env "null" = Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd
+                                   $ LoadState $ LSCSetDebugLevel DebugNULL
+hsSetDebug env level  = luaEvent env $ EventLog LogWarn
+                       $ "[Luau] unknown debug level" ⧺ show level

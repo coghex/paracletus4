@@ -42,6 +42,7 @@ processEvent (QCEvent event) = case event of
         (x,y,z)    = cam
         newCam     = (cx+x,cy+y,cz+z)
     modify $ \s → s { stCamera = newCam }
+    writeQueue' LoadQueue $ QCLoadCmd $ LoadState $ LSCSetCamera newCam
   EventSys SysExit          → do
     logCommand (LogDebug 1) "[Vulk] quitting..."
     st ← get
@@ -54,7 +55,9 @@ processEvent (QCEvent event) = case event of
     st ← get
     let (cx,cy,cz) = stCamera st
         cz'        = min -0.1 $ max -10 $ cz - (0.1*realToFrac y)
-    modify $ \s → s { stCamera = (cx,cy,cz') }
+        newCam     = (cx,cy,cz')
+    modify $ \s → s { stCamera = newCam }
+    writeQueue' LoadQueue $ QCLoadCmd $ LoadState $ LSCSetCamera newCam
   EventInput inpEvent       → writeQueue' InputQueue $ QCInpCmd $ InpEvent inpEvent
   EventLoadFont font        → modify $ \s → s { stFont   = stFont s ⧺ [font] }
   EventTextures texmap      → do

@@ -6,7 +6,7 @@ module Load.Data where
 -- data for the loading thread is found
 import Prelude()
 import UPrelude
-import Data ( ID, Shell, Color )
+import Data ( ID, Shell, Color, FPS )
 import Data.Aeson
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -50,10 +50,17 @@ data DrawState = DrawState
   , dsShell     ∷ Shell
   -- | a variable to decide if we show a loading screen
   , dsLoad      ∷ LoadState
+  -- | we keep a copy of the camera in the load thread
+  , dsCamera    ∷ (Double,Double,Double)
+  -- | debug level shows various info on the screen
+  , dsDebug     ∷ DebugLevel
   } deriving (Show, Eq)
 
 -- | the state of the load thread meaning whether we have loaded or not
 data LoadState = Loading | Loaded deriving (Show, Eq)
+
+-- | level at which we show extra info on the screen
+data DebugLevel = DebugFPS FPS | DebugNULL deriving (Show, Eq)
 
 -- | windows contain elements that get converted to tiles and dyns
 data Window = Window { winID    ∷ ID
