@@ -116,7 +116,7 @@ hsNewText ∷ Env → Double → Double → Double → Double
 hsNewText env x y w h win font text = do
   clearID env
   Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew
-             $ LCText (ID win) $ Text IDNULL (x,y) (w,h) (ID font) text
+             $ LCText (ID win) $ Text IDNULL (x,y) (w,h) (ID font) text False
   readID env
 
 -- | create a new button
@@ -125,7 +125,7 @@ hsNewLink ∷ Env → Double → Double → Double → Double
 hsNewLink env x y w h win font text link = do
   clearID env
   Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew
-             $ LCButton (ID win) (Text IDNULL (x,y) (w,h) (ID font) text) (BFLink (ID link))
+             $ LCButton (ID win) (Text IDNULL (x,y) (w,h) (ID font) text False) (BFLink (ID link))
   id0 ← readID env
   return id0
 

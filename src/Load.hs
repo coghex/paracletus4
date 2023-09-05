@@ -135,7 +135,7 @@ processCommands ds = do
 -- | returns the tiles in the current window
 findTiles ∷ LoadState → Int → TextureMap → [Font] → [[TTFData]] → ID → Map.Map ID Window → [Tile]
 findTiles loaded fontsize texmap fonts ttfdata win wins
-  | loaded ≡ Loading = genStringTiles fontsize' fd (fst pos) pos (2,2) "loading..."
+  | loaded ≡ Loading = genStringTiles fontsize' False fd (fst pos) pos (2,2) "loading..."
   | loaded ≡ Loaded  = case Map.lookup win wins of
                            Nothing → []
                            Just w0 → generateWinTiles fontsize texmap fonts
@@ -153,21 +153,22 @@ generateWinTiles fontsize texmap fonts ttfdata (we:wes)
   where tiles = generateElemTiles fontsize texmap fonts ttfdata we
 generateElemTiles ∷ Int → TextureMap → [Font] → [[TTFData]] → WinElem → [Tile]
 generateElemTiles fontsize texmap _     _       (WinElemTile tile) = [tile']
-  where Tile id0 tp (TileTex tind tsiz t c) = tile
-        tile' = Tile id0 tp (TileTex tind tsiz (t + fontsize) c)
+  where Tile id0 tp (TileTex tind tsiz t c) mov = tile
+        tile' = Tile id0 tp (TileTex tind tsiz (t + fontsize) c) mov
 generateElemTiles _        texmap fonts ttfdata (WinElemText text)
   = case findFont fonts id0 of
     Nothing → []
-    Just font0 → genStringTiles fontsize' fd (fst pos) pos siz $ textString text
+    Just font0 → genStringTiles fontsize' mov fd (fst pos) pos siz $ textString text
                    where fd = ttfdata !! fontIndex font0
                          fontsize' = calcFontOffset fonts $ fontIndex font0
     where pos = textPos text
           id0 = textFont text 
           siz = textSize text
+          mov = textMoves text
 generateElemTiles fontsize texmap fonts ttfdata (WinElemButton text buttid _ v)
   = case findFont fonts id0 of
     Nothing → []
-    Just font0 → genStringTiles fontsize' fd (fst pos)
+    Just font0 → genStringTiles fontsize' mov fd (fst pos)
                                 pos siz (textString text)
                                 ⧺ backTiles
                    where fd        = ttfdata !! fontIndex font0
@@ -177,10 +178,12 @@ generateElemTiles fontsize texmap fonts ttfdata (WinElemButton text buttid _ v)
                                        BSNULL     → emptyTiles (length boxtiles)
                                                                fontsize
                         -- TODO: unhardcode the 4
-                         boxtiles  = boxTiles fontsize pos' (0.25,0.25) (4,1) greenColor
+                         boxtiles  = boxTiles fontsize pos' (0.25,0.25) (4,1)
+                                              greenColor mov
     where pos = textPos text
           id0 = textFont text 
           siz = textSize text
+          mov = textMoves text
           pos' = (fst pos, snd pos + 0.5)
 generateElemTiles fontsize texmap fonts ttfdate (WinElemWorld world) =
   generateWorldTiles fontsize world texmap
@@ -263,6 +266,7 @@ processLoadInputButtFunc ds (BFLink link) = do
           return LoadResultSuccess
         else do
           sendGenerateWindowData link
+          sendSys SysResetCam
           return $ LoadResultDrawState $ ds { dsCurr   = link
                                             , dsLoad   = Loading
                                             , dsStatus = DSSRecreate }
@@ -281,7 +285,7 @@ generateWindowDataInWin ∷ Window → Window
 generateWindowDataInWin win = win { winElems = map generateWinElemData (winElems win) }
 generateWinElemData ∷ WinElem → WinElem
 generateWinElemData (WinElemWorld (World Nothing))
-  = WinElemWorld $ World $ Just $ generateWorldData (2,2)
+  = WinElemWorld $ World $ Just $ generateWorldData
 generateWinElemData we = we
 
 -- | turns all buttons off
@@ -315,11 +319,6 @@ toggleButtonInElem offset (Button _ buttid _ _) val (WinElemButton text id0 butt
   | otherwise    = WinElemButton text id0 buttfunc BSNULL
 toggleButtonInElem _      _                     _   we = we
 
---  where Button _ id0 pos size = butt
---        newtile               = Tile id0 (TilePos (0,0) (1,1))
---                                         (TileTex (0,0) (1,1) texInd)
---        texInd                = 0
-
 -- | returns requested data on the user data TVar,
 --   not all data is in the draw state so we have
 --   to ask the main thread for some of it
@@ -338,23 +337,22 @@ newChunk ds (LCTile  win pos tex)      = do
   log' (LogDebug 1) $ "[Load] loading new tile to win " ⧺ show win
   id0 ← liftIO newID
   let TextureMap tm = dsTexMap ds
-      tile          = Tile id0 pos tt
+      tile          = Tile id0 pos tt (TileBhv False)
       tt            = findTex tex tm
   writeIDTVar id0
   return $ LoadResultDrawState $ newTile ds win tile
 newChunk ds (LCAtlas win pos tex tind) = do
   id0 ← liftIO newID
   let TextureMap tm = dsTexMap ds
-      tile          = Tile id0 pos tt
+      tile          = Tile id0 pos tt (TileBhv False)
       tt            = findAtlas 0 tind tex tm
   writeIDTVar id0
   return $ LoadResultDrawState $ newTile ds win tile
 newChunk ds (LCText win text) = do
   id0 ← liftIO newID
-  --let tile = Tile id0 (TilePos pos siz) $ TileTex (0,0) (1,1) (-10)
   writeIDTVar id0
   return $ LoadResultDrawState $ newText ds win text id0
-newChunk ds (LCButton win (Text id (x,y) (w,h) font tx) buttfunc) = do
+newChunk ds (LCButton win (Text id (x,y) (w,h) font tx bhv) buttfunc) = do
   id0 ← liftIO newID
   writeIDTVar id0
   fonts ← readFonts
@@ -363,7 +361,7 @@ newChunk ds (LCButton win (Text id (x,y) (w,h) font tx) buttfunc) = do
       buttsize = calcTextBoxSize tx fontdata
   -- the button size is dummy data, we let the input thread sort it out
   sendInputElem $ IEButt $ Button buttfunc id0 (x,y) buttsize
-  return $ LoadResultDrawState $ newButton ds win (Text id (x,y) (w,h) font tx)
+  return $ LoadResultDrawState $ newButton ds win (Text id (x,y) (w,h) font tx bhv)
                                            id0 buttfunc
 newChunk ds (LCWorld win) = do
   return $ LoadResultDrawState $ newWorld win ds

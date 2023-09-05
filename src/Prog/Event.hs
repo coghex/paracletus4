@@ -35,6 +35,7 @@ processEvent ∷ QueueCmd → Prog ε σ ()
 processEvent (QCEvent event) = case event of
   EventSys SysReload   → modify $ \s → s { stReload = RSReload }
   EventSys SysRecreate → modify $ \s → s { stReload = RSRecreate }
+  EventSys SysResetCam → modify $ \s → s { stCamera = (0,0,-1) }
   EventSys SysExit     → do
     logCommand (LogDebug 1) "[Vulk] quitting..."
     st ← get

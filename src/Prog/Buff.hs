@@ -11,7 +11,7 @@ import Vulk.Trans ( texDynDataFrame, dynDataFrame )
 
 generateDynData ∷ [Tile] → [DynData]
 generateDynData [] = []
-generateDynData ((Tile id (TilePos (x,y) (w,h)) (TileTex texi texs tex col)):ts)
+generateDynData ((Tile id (TilePos (x,y) (w,h)) (TileTex texi texs tex col) bhv):ts)
   = DynData dataF texDF : generateDynData ts
       where dataF = dynDataFrame pos scale
             texDF = texDynDataFrame col texi tex

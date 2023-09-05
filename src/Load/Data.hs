@@ -22,7 +22,8 @@ data DynData = DynData { ddDataF ∷ Mat44f
 -- | a tile in abstract form
 data Tile = Tile { tileID  ∷ ID
                  , tilePos ∷ TilePos
-                 , tileTex ∷ TileTex } deriving (Show, Eq)
+                 , tileTex ∷ TileTex
+                 , tileBhv ∷ TileBhv } deriving (Show, Eq)
 data TilePos = TilePos { tPos   ∷ (Double,Double)
                        , tScale ∷ (Double,Double) } deriving (Show, Eq)
 -- | texture indexes into a png atlas of size tSize,
@@ -31,6 +32,8 @@ data TileTex = TileTex { tInd   ∷ (Int,Int)
                        , tSize  ∷ (Int,Int)
                        , tT     ∷ Int
                        , tColor ∷ Color } deriving (Show, Eq, Ord)
+-- | some tiles cant be moved, so we keep track here
+data TileBhv = TileBhv { tMoves ∷ Bool } deriving (Show, Eq)
 
 -- | the state of the load thread
 data DrawState = DrawState
@@ -71,7 +74,8 @@ data Text = Text { textID     ∷ ID
                  , textPos    ∷ (Double,Double)
                  , textSize   ∷ (Double,Double)
                  , textFont   ∷ ID
-                 , textString ∷ String } deriving (Show, Eq)
+                 , textString ∷ String
+                 , textMoves  ∷ Bool } deriving (Show, Eq)
 
 -- | status of the loading thread, allowing
 --   us to return results of deeply nested

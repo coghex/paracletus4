@@ -122,6 +122,7 @@ data MouseState = MouseState { mouse1   ∷ Maybe (Double,Double)
 data SysAction = SysRecreate | SysReload
                | SysFullScreen
                | SysWindowed Int Int Int Int
+               | SysResetCam
                | SysExit | SysNULL deriving (Show, Eq)
 
 -- | possible changes to make to the settings

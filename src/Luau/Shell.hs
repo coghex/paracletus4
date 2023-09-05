@@ -8,7 +8,7 @@ import Data.List.Split ( splitOn )
 import Data ( Shell(..), ShellCard(..), ID(..) )
 import Util ( blackColor )
 import Prog.Data ( Env(..) )
-import Load.Data ( Tile(..), TilePos(..), TileTex(..), DrawState(..), DSStatus(..) )
+import Load.Data
 import Load.Util ( boxTiles, emptyTiles )
 import Luau.Data ( ShellCmd(..) )
 import Luau.ShCmd ( loadShCmds )
@@ -265,12 +265,20 @@ shTiles fontsize ttfdata sh = tiles
 -- | the cursor tiles
 cursTiles ∷ Int → [TTFData] → (Double,Double) → Shell → [Tile]
 cursTiles fontsize ttfdata pos sh = case shLoaded sh of
-  False → [Tile IDNULL (TilePos (0,0) (1,1)) (TileTex (0,0) (1,1) fontsize blackColor)]
+  False → [Tile IDNULL (TilePos (0,0) (1,1))
+                       (TileTex (0,0) (1,1) fontsize blackColor)
+                       (TileBhv False)]
   True  → case indexTTFData ttfdata '|' of
-    Nothing → [Tile IDNULL (TilePos (0,0) (1,1)) (TileTex (0,0) (1,1) fontsize blackColor)]
+    Nothing → [Tile IDNULL (TilePos (0,0) (1,1))
+                           (TileTex (0,0) (1,1) fontsize blackColor)
+                           (TileBhv False)]
     Just (TTFData _ _ (GlyphMetrics chW chH _ _ _)) → if shCursSt sh then
-        [Tile IDNULL (TilePos pos' size)  (TileTex (0,0) (1,1) 93 blackColor)]
-      else [Tile IDNULL (TilePos (0,0) (1,1)) (TileTex (0,0) (1,1) fontsize blackColor)]
+        [Tile IDNULL (TilePos pos' size)
+                     (TileTex (0,0) (1,1) 93 blackColor)
+                     (TileBhv False)]
+      else [Tile IDNULL (TilePos (0,0) (1,1))
+                        (TileTex (0,0) (1,1) fontsize blackColor)
+                        (TileBhv False)]
           where size  = (realToFrac chW, 2*realToFrac chH)
                 pos'  = ((fst pos) + xcurs, (snd pos) - ycurs - 0.1)
                 xcurs = findCursPos ttfdata $ take n $ shInpStr sh
@@ -280,9 +288,13 @@ cursTiles fontsize ttfdata pos sh = case shLoaded sh of
 txtTiles ∷ Int → [TTFData] → (Double,Double) → Shell → Int → [Tile]
 txtTiles fontsize ttfdata pos sh buffSize = case shLoaded sh of
   False → take buffSize $ repeat
-    (Tile IDNULL (TilePos (0,0) (1,1)) (TileTex (0,0) (1,1) fontsize blackColor))
+    (Tile IDNULL (TilePos (0,0) (1,1))
+                 (TileTex (0,0) (1,1) fontsize blackColor)
+                 (TileBhv False))
   True  → tiles ⧺ take (buffSize - length tiles)
-    (repeat (Tile IDNULL (TilePos (0,0) (1,1)) (TileTex (0,0) (1,1) fontsize blackColor)))
+    (repeat (Tile IDNULL (TilePos (0,0) (1,1))
+                         (TileTex (0,0) (1,1) fontsize blackColor)
+                         (TileBhv False)))
     where tiles  = genShStringTiles fontsize ttfdata (fst pos') pos' (1,1) string
           string = genShellStr sh
           pos'   = (fst pos + 1, snd pos - 1)
@@ -322,6 +334,7 @@ genShStringTiles fontsize ttfdata x0 (x,y) (w,h) (ch:str)   = case indexTTFData 
     → tile : genShStringTiles fontsize ttfdata x0 (x+(w*2*chA),y) (w,h) str
       where tile = Tile IDNULL (TilePos (x',y') (w',h'))
                                (TileTex (0,0) (1,1) chInd blackColor)
+                               (TileBhv False)
             (x',y') = (realToFrac(x+(2*w*chX)+w*chW)
                       ,realToFrac(y+(2*h*chY)-h*chH-0.1))
             (w',h') = (w * realToFrac chW
@@ -352,4 +365,4 @@ shBoxTiles fontsize pos sh  = tiles
         tiles     = case shLoaded sh of
                       False → emptyTiles (length tiles') fontsize
                       True  → tiles'
-        tiles'    = boxTiles fontsize pos (1,1) siz blackColor
+        tiles'    = boxTiles fontsize pos (1,1) siz blackColor False

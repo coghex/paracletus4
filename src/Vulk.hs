@@ -18,7 +18,7 @@ import Graphics.Vulkan.Ext.VK_KHR_swapchain
 import Data ( Color(Color), FPS(..), ID(..) )
 import Luau ( luauThread )
 import Load ( loadThread )
-import Load.Data ( DynData(..), Tile(..), TilePos(..), TileTex(..) )
+import Load.Data ( DynData(..), Tile(..), TilePos(..), TileTex(..), TileBhv(..) )
 import Load.Util ( emptyTiles )
 import Prog ( MonadIO(liftIO), Prog, MonadError(catchError), MonadReader(ask) )
 import Prog.Buff ( generateDynData )
@@ -370,7 +370,8 @@ genCommandBuffs dev pdev commandPool queues graphicsPipeline renderPass
             (w,h) = (fromIntegral w'/64.0,fromIntegral h'/64.0)
             tiles = [Tile IDNULL (TilePos (0,0)
                                  (fromIntegral w',fromIntegral h'))
-                                 (TileTex (0,0) (1,1) 0 blackColor)]
+                                 (TileTex (0,0) (1,1) 0 blackColor)
+                                 (TileBhv False)]
             dyns  = generateDynData tiles
         modifyTVar env DynsTVar $ TVDyns dyns
         modifyTVar env VertsTVar $ TVVerts $ Verts res
