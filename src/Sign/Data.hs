@@ -102,6 +102,7 @@ data InputStateChange = ISCRegisterKeys String
 data InputState = InputState { keyMap     ∷ KeyMap
                              , keyCap     ∷ Capture
                              , inputElems ∷ [InputElem]
+                             , buttSt     ∷ Bool
                              , mouseSt    ∷ MouseState } deriving (Show, Eq)
 
 -- | various window elems have a corresponding input elem

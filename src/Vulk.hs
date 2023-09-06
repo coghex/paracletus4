@@ -9,7 +9,7 @@ module Vulk where
 import Prelude()
 import UPrelude
 import Control.Concurrent ( forkIO )
-import Control.Monad ( forM_, when )
+import Control.Monad ( forM_, when, unless )
 import Control.Monad.State.Class ( gets, modify )
 import Data.List ( zip4 )
 import GHC.Stack ( HasCallStack )
@@ -306,7 +306,10 @@ vulkLoop (VulkanLoopData (GQData pdev dev commandPool _) queues scsd0
         -- some events must be processed in the parent thread
         processEvents
         -- tell the load thead that we have finished drawing
-        writeQueue' LoadQueue $ QCLoadCmd LoadLoad
+        loaded ← gets stLoaded
+        unless loaded $ do
+          writeQueue' LoadQueue $ QCLoadCmd LoadLoad
+          modify $ \s → s { stLoaded = True }
         -- simple fps counter
         seconds ← getTime
         cur ← liftIO $ atomically $ readTVar currentSec

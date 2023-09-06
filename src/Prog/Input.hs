@@ -142,6 +142,7 @@ initInputState ∷ InputState
 initInputState = InputState { keyMap     = KeyMap Map.empty
                             , keyCap     = CaptureNULL
                             , inputElems = []
+                            , buttSt     = False
                             , mouseSt    = initMouseState }
 initMouseState ∷ MouseState
 initMouseState = MouseState { mouse1   = Nothing

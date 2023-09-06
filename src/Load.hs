@@ -17,7 +17,7 @@ import qualified Data.Map as Map
 import Data.String ( fromString )
 import Data.Bifunctor ( bimap )
 import Game.Data ( World(..) )
-import Game.World ( newWorld, generateWorldData, generateWorldTiles )
+import Game.World ( newWorld, generateWorldData, generateWorldTiles, moveWorldCursor )
 import Load.Data
 import Load.Util
 import Luau.Shell ( toggleShell, shTiles, processShellCommand, positionShell, genShellStr )
@@ -75,6 +75,7 @@ processCommands ds = do
   case mcmd of
     Just cmd → do
       ret ← processCommand ds cmd
+      --log' LogInfo $ "[Load] LoadCmd: " ⧺ show cmd
       case ret of
         -- if command success keep processing commands
         LoadResultSuccess       → processCommands ds
@@ -224,7 +225,8 @@ processCommand ds cmd = case cmd of
   LoadState (LSCSetGLFWWindow win) →
     return $ LoadResultDrawState ds { dsWindow = Just win }
   LoadState (LSCSetCamera cam) →
-    return $ LoadResultDrawState ds { dsCamera = cam }
+    return $ LoadResultDrawState ds { dsCamera = cam
+                                    , dsWins   = moveWorldCursor (dsWins ds) cam }
   LoadState (LSCSetDebugLevel dl) →
     return $ LoadResultDrawState ds { dsDebug = dl }
   LoadState (LSCSetFPS newfps) → case dsDebug ds of
@@ -235,10 +237,9 @@ processCommand ds cmd = case cmd of
     DebugNULL    → return LoadResultSuccess
   LoadTest → do
     --sendTest
-    log' LogInfo $ "[Load] ****** loaded: " ⧺ show (dsLoad ds)
-    return LoadResultSuccess
-    --return $ LoadResultDrawState $ ds { dsStatus = DSSRecreate
-    --                                  , dsLoad   = Loaded }
+    --log' LogInfo $ "[Load] ****** loaded: " ⧺ show (dsLoad ds)
+    --return LoadResultSuccess
+    return $ LoadResultDrawState $ ds { dsStatus = DSSRecreate }
   LoadID → do
     log' LogInfo "[Load] creating id..."
     ID id0 ← liftIO newID

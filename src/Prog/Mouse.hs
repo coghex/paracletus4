@@ -25,21 +25,27 @@ processMouse env win is = do
       pos'   = normalizePos pos siz
       elems' = pullOutButtons elems
   -- toggles button states
-  if length elems > 0 then
+  buttst ← if length elems > 0 then do
     writeQueue'' env LoadQueue $ QCLoadCmd $ LoadInput
       $ LIToggleButtons elems' True
-  else writeQueue'' env LoadQueue $ QCLoadCmd $ LoadInput LIClearButtons
+    return True
+  else if buttSt is then do
+    writeQueue'' env LoadQueue $ QCLoadCmd $ LoadInput LIClearButtons
+    return False
+  else return False
   -- sends the mouse position to the main thread to move the camera
   -- when the middle mouse button is pressed
   case mouse3 newms of
-    Nothing    → return is { mouseSt = newms }
+    Nothing    → return is { mouseSt = newms
+                           , buttSt  = buttst }
     Just (x,y) → do
       let (mx,my)   = pos'
           (x',y')   = normalizePos (x,y) siz
           (x'',y'') = (64*(mx - x'), 64*(my - y'))
-          newnewms  = newms { mouse3 = Just pos }
+          newnewnewms  = newms { mouse3 = Just pos }
       writeQueue'' env EventQueue $ QCEvent $ EventSys $ SysMoveCam (x'',y'',0)
-      return is { mouseSt = newnewms }
+      return is { mouseSt = newnewnewms
+                , buttSt  = buttst }
 
 -- | takes a list of inputElems and gives back the buttons
 pullOutButtons ∷ [InputElem] → [Button]
