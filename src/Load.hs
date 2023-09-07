@@ -17,7 +17,9 @@ import qualified Data.Map as Map
 import Data.String ( fromString )
 import Data.Bifunctor ( bimap )
 import Game.Data ( World(..) )
-import Game.World ( newWorld, generateWorldData, generateWorldTiles, moveWorldCursor )
+import Game.World ( newWorld, generateWorldData, generateWorldTiles
+                  , moveWorldCursor, normalizeIso, normalizeCart, clickWorld
+                  , printWorld )
 import Load.Data
 import Load.Util
 import Luau.Shell ( toggleShell, shTiles, processShellCommand, positionShell, genShellStr )
@@ -185,8 +187,8 @@ generateElemTiles fontsize texmap fonts ttfdata (WinElemButton text buttid _ v)
                                        BSSelected → boxtiles
                                        BSNULL     → emptyTiles (length boxtiles)
                                                                fontsize
-                        -- TODO: unhardcode the 4
-                         boxtiles  = boxTiles fontsize pos' (0.25,0.25) (4,1)
+                        -- TODO: unhardcode the 5
+                         boxtiles  = boxTiles fontsize pos' (0.25,0.25) (5,1)
                                               greenColor mov
     where pos = textPos text
           id0 = textFont text 
@@ -237,7 +239,16 @@ processCommand ds cmd = case cmd of
     DebugNULL    → return LoadResultSuccess
   LoadTest → do
     --sendTest
-    --log' LogInfo $ "[Load] ****** loaded: " ⧺ show (dsLoad ds)
+    --printWorldCursor $ dsWins ds
+    case dsWindow ds of
+      Nothing → return ()
+      Just w0 → do
+        pos ← liftIO $ GLFW.getCursorPos w0
+        siz ← liftIO $ GLFW.getWindowSize w0
+        let pos0 = mouseToCart pos siz
+            pos1 = normalizeIso pos0
+            pos2 = normalizeCart pos1
+        log' LogInfo $ "[Load] ****** " ⧺ show pos0 ⧺ ", isopos: " ⧺ show pos1 ⧺ ", cartpos: " ⧺ show pos2
     --return LoadResultSuccess
     return $ LoadResultDrawState $ ds { dsStatus = DSSRecreate }
   LoadID → do
@@ -263,15 +274,26 @@ processCommand ds cmd = case cmd of
 processLoadInput ∷ (MonadLog μ,MonadFail μ)
   ⇒ DrawState → LoadInputCmd → LogT μ LoadResult
 processLoadInput ds (LIButton (Button func _ _ _)) = processLoadInputButtFunc ds func
-processLoadInput ds (LIToggleButtons butts val)  = do
+processLoadInput ds (LIToggleButtons butts val)    = do
   fontsize ← readFontSize
   let ds' = toggleButtons ds fontsize butts val
   return $ LoadResultDrawState ds'
-processLoadInput ds LIClearButtons  = do
+processLoadInput ds LIClearButtons                 = do
   return $ LoadResultDrawState ds'
     where ds' = ds { dsWins   = clearButtons (dsWins ds)
                    , dsStatus = DSSReload }
-processLoadInput _  input           = do
+processLoadInput ds (LILeftClick pos)              = do
+  case dsWindow ds of
+    Nothing → return $ LoadResultError "[Load] no window exists"
+    Just w0 → do
+      siz ← liftIO $ GLFW.getWindowSize w0
+      let ds'   = ds { dsWins   = processClick pos'' (dsWins ds)
+                     , dsStatus = DSSReload }
+          pos'  = mouseToCart pos siz
+          pos'' = normalizeIso pos'
+      --log' LogInfo $ "[Load] click pos: " ⧺ show pos'
+      return $ LoadResultDrawState ds'
+processLoadInput _  input                          = do
   return $ LoadResultError $ "[Load] unknown load input command " ⧺ show input
 processLoadInputButtFunc ∷ (MonadLog μ,MonadFail μ)
   ⇒ DrawState → ButtonFunc → LogT μ LoadResult
@@ -292,6 +314,20 @@ processLoadInputButtFunc ds (BFLink link) = do
       Nothing → return $ LoadResultError $ "no window " ⧺ show link
 processLoadInputButtFunc ds bf            = do
   return $ LoadResultError $ "[Load] unknown button function " ⧺ show bf
+
+-- | evaluates a click based on the winelems under it
+processClick ∷ (Double,Double) → Map.Map ID Window → Map.Map ID Window
+processClick pos wins = Map.map (processClickInWins pos) wins
+processClickInWins ∷ (Double,Double) → Window → Window
+processClickInWins pos (Window id0 elems) = Window id0 elems'
+  where elems' = processClickInElems pos elems
+processClickInElems ∷ (Double,Double) → [WinElem] → [WinElem]
+processClickInElems _   []                         = []
+processClickInElems pos ((WinElemWorld world):wes)
+  = we' : processClickInElems pos wes
+  where we'  = WinElemWorld $ clickWorld pos world
+processClickInElems pos (we:wes)
+  = we : processClickInElems pos wes
 
 -- | generates any data a window might need when switched to
 sendGenerateWindowData ∷ (MonadLog μ,MonadFail μ) ⇒ ID → LogT μ ()
@@ -359,7 +395,7 @@ newChunk ds (LCTile  win pos tex)      = do
   id0 ← liftIO newID
   let TextureMap tm = dsTexMap ds
       tile          = Tile id0 pos tt (TileBhv False)
-      tt            = findTex tex tm
+      tt            = findTex 0 tex tm
   writeIDTVar id0
   return $ LoadResultDrawState $ newTile ds win tile
 newChunk ds (LCAtlas win pos tex tind) = do
@@ -452,6 +488,18 @@ positionDebug win = case win of
     let (w',h') = bimap realToFrac realToFrac (w,h)
     return (w' / 64 - 3.0,h' / 64 - 2.0)
 
+-- | prints the first world cursor
+printWorldCursor ∷ (MonadLog μ,MonadFail μ) ⇒ Map.Map ID Window → LogT μ ()
+printWorldCursor wins = sequence_ $ Map.map printWorldCursorInWins wins
+printWorldCursorInWins ∷ (MonadLog μ,MonadFail μ) ⇒ Window → LogT μ ()
+printWorldCursorInWins (Window id0 elems) = printWorldCursorInElems elems
+printWorldCursorInElems ∷ (MonadLog μ,MonadFail μ) ⇒ [WinElem] → LogT μ ()
+printWorldCursorInElems []       = return ()
+printWorldCursorInElems ((WinElemWorld (World dat curs)):wes) = do
+  log' (LogDebug 1) $ "[Load] World Cursor: " ⧺ show curs
+printWorldCursorInElems (we:wes) = printWorldCursorInElems wes
+
+
 -- | initial draw state
 initDrawState ∷ DrawState
 initDrawState = DrawState DSSNULL Nothing (TextureMap [])
@@ -461,3 +509,4 @@ initDrawState = DrawState DSSNULL Nothing (TextureMap [])
 initShell ∷ Shell
 initShell = Shell "$> " Nothing 1 True "" "" "" ""
                   False False (0,0) (0,0) (-1) []
+

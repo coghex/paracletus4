@@ -27,6 +27,7 @@ texm[2] = { name = "grayscaleTile",fp = "dat/tex/grayscale.png" }
 texm[3] = { name = "grecoTile",fp = "dat/tex/texture.jpg" }
 texm[4] = { name = "blankPage",fp = "dat/tex/blankpage.jpg" }
 texm[5] = { name = "nullTile",fp = "dat/tex/world/null.png" }
+texm[6] = { name = "outlineTile",fp = "dat/tex/world/outline.png" }
 
 atlasm = {}
 atlasm[1] = { name = "plainsTile",fp = "dat/tex/world/plains.png",w = 3, h = 4 }

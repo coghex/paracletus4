@@ -63,7 +63,7 @@ processMouseButton env is win mb mbs mk = do
     siz ← GLFW.getWindowSize win
     let elems = findElemsUnder pos' $ inputElems is
         pos'  = normalizePos pos siz
-    sendClick env elems
+    sendClick env elems pos
     return is
   -- middle mouse button
   else if mb ≡ GLFW.mousebutt3 then do
@@ -83,11 +83,12 @@ processMouseButton env is win mb mbs mk = do
 
 -- | sends data to the load thread corresponding
 --   to the first input elem in the list
-sendClick ∷ Env → [InputElem] → IO ()
-sendClick _   []            = return ()
-sendClick env ((IEButt butt):es) = do
+sendClick ∷ Env → [InputElem] → (Double,Double) → IO ()
+sendClick env []                pos = do
+  writeQueue'' env LoadQueue $ QCLoadCmd $ LoadInput $ LILeftClick pos
+sendClick env ((IEButt butt):_) _   =
   writeQueue'' env LoadQueue $ QCLoadCmd $ LoadInput $ LIButton butt
-sendClick env (_:es)        = sendClick env es
+sendClick env (_:es)            pos = sendClick env es pos
 
 -- | returns the list of input elems at the specified position
 findElemsUnder ∷ (Double,Double) → [InputElem] → [InputElem]

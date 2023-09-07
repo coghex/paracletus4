@@ -11,11 +11,20 @@ import qualified Vulk.GLFW as GLFW
 
 -- | creates a number of empty tiles
 emptyTiles ∷ Int → Int → [Tile]
-emptyTiles n offset = take n $ repeat $ Tile IDNULL
-                                             (TilePos (0,0) (4,4))
-                                             (TileTex (0,0) (1,1) offset
-                                             blackColor)
-                                             (TileBhv False)
+emptyTiles n offset = take n $ repeat $ emptyTile offset
+
+emptyTile ∷ Int → Tile
+emptyTile offset = Tile IDNULL
+                        (TilePos (0,0) (4,4))
+                        (TileTex (0,0) (1,1) offset
+                        blackColor)
+                        (TileBhv False)
+
+-- | converts a glfw mouse position to a screen cartesian position
+mouseToCart ∷ (Double,Double) → (Int,Int) → (Double,Double)
+mouseToCart (x,y) (w,h) = (x',-y')
+  where x' = (x - ((fromIntegral w) / 2)) / 64.0
+        y' = (y - ((fromIntegral h) / 2)) / 64.0
 
 -- | pads a list of tiles with empty tiles
 padTiles ∷ Int → Int → [Tile] → [Tile]
@@ -111,11 +120,11 @@ addElemToWin wins win elem = case Map.lookup win wins of
     where win' = w0 { winElems = elem : winElems w0 }
 
 -- | converts tex to tiletex at input tex n
-findTex ∷ String → [(String,Tex)] → TileTex
-findTex _ [] = TileTex (0,0) (1,1) 0 blackColor
-findTex n ((name,Tex _ ind siz):texs)
-  | n ≡ name  = TileTex (0,0) siz ind blackColor
-  | otherwise = findTex n texs
+findTex ∷ Int → String → [(String,Tex)] → TileTex
+findTex offset _ [] = TileTex (0,0) (1,1) offset blackColor
+findTex offset n ((name,Tex _ ind siz):texs)
+  | n ≡ name  = TileTex (0,0) siz (ind+offset) blackColor
+  | otherwise = findTex offset n texs
 findAtlas ∷ Int → (Int,Int) → String → [(String,Tex)] → TileTex
 findAtlas offset _    _ [] = TileTex (0,0) (1,1) offset blackColor
 findAtlas offset tind n ((name,Tex _ ind siz):texs)
