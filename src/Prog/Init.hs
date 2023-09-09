@@ -44,6 +44,8 @@ initEnv = do
   inpQ     ← newQueue
   -- time thread sends commands in regular intervals
   timeQ    ← newQueue
+  -- luau thead commands control data exchange to lua
+  luauQ    ← newQueue
   -- channels that contain semaphores for each thread
   luaCh    ← newTChan
   loadCh   ← newTChan
@@ -66,7 +68,7 @@ initEnv = do
   idTV     ← atomically $ newTVar Nothing
   -- Tvar specifically for returning data back to lua
   udTV     ← atomically $ newTVar Nothing
-  let env = Env { envQueues = Queues queues4
+  let env = Env { envQueues = Queues queues5
                 , envChans  = Chans chans4
                 , envTVars  = TVars tvars7
                 , envLuaSt  = luaSt }
@@ -75,6 +77,7 @@ initEnv = do
       queues2 = Map.insert LoadQueue  loadQ   queues1
       queues3 = Map.insert InputQueue inpQ    queues2
       queues4 = Map.insert TimeQueue  timeQ   queues3
+      queues5 = Map.insert LuauQueue  luauQ   queues4
       chans0  = Map.empty
       chans1  = Map.insert LuaChan    luaCh   chans0
       chans2  = Map.insert LoadChan   loadCh  chans1

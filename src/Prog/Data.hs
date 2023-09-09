@@ -7,7 +7,7 @@ import Prelude()
 import UPrelude
 import qualified Control.Monad.Logger.CallStack as Logger
 import Load.Data ( DynData )
-import Luau.Data ( UserVar )
+import Luau.Data ( UserVar, LuauCmd(..) )
 import Sign.Data ( TState, Event(..), LoadCmd(..), InpCmd(..) )
 import Sign.Except ( ProgExcept )
 import Sign.Queue ( Queue, TChan )
@@ -39,9 +39,9 @@ data Env = Env { envQueues ∷ Queues
 -- | dynamic collection of queues
 data Queues    = Queues { qm ∷ Map QueueName (Queue QueueCmd) }
 data QueueCmd  = QCEvent Event | QCLoadCmd LoadCmd | QCTimeCmd TimeCmd
-               | QCInpCmd InpCmd deriving (Show, Eq)
+               | QCInpCmd InpCmd | QCLuauCmd LuauCmd deriving (Show, Eq)
 -- | some queues are required, others can be added
-data QueueName = EventQueue | LoadQueue | TimeQueue
+data QueueName = EventQueue | LoadQueue | TimeQueue | LuauQueue
                | InputQueue | CustomQueue Int deriving (Show, Eq, Ord)
 -- | dynamic collection of chans
 data Chans     = Chans { cm ∷ Map ChanName (TChan TState) }

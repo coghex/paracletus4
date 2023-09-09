@@ -1,3 +1,4 @@
+{-# LANGUAGE Strict #-}
 -- | lua commands that are registered in Luau.hs are defined here.
 module Luau.Command where
 -- commands for lua are defined
@@ -14,10 +15,11 @@ import Prog.Data
 import Sign.Data
 import Sign.Queue ( writeQueue, readChan, tryReadChan )
 import Sign.Var ( atomically, readTVar )
-import Sign.Util ( writeQueue'', writeChan'', readTVar'', clearTVar )
+import Sign.Thread ( threadDelay )
+import Sign.Util ( writeQueue'', writeChan'', readTVar'', clearTVar, log' )
 import Load.Data
 import Luau.Util ( vtail, vhead, luaEvent )
-import Luau.Data ( ShellCmd(..), UserVar(..) )
+import Luau.Data ( ShellCmd(..), UserVar(..), LuauCmd(..) )
 import Vulk.Font ( Font(..) )
 import qualified Vulk.GLFW as GLFW
 
@@ -75,12 +77,27 @@ readID env = do
     Just (TVID (ID id0)) → return id0
     Just _               → return "ERR"
 
--- | reads an id from the load thread
+-- | reads user data from the load thread
 readUD ∷ Env → Lua.Lua UserVar
-readUD env = do
+readUD env = readUD' 10000 env
+readUD' ∷ Int → Env → Lua.Lua UserVar
+readUD' 0 env = do
+  luaEvent env $ EventLog LogError $ "[Luau] luau read ud timeout"
+  return UVNULL
+readUD' n env = do
   udin ← Lua.liftIO $ readTVar'' env UDTVar
+  Lua.liftIO $ threadDelay 1000
   case udin of
-    Nothing              → readUD env
+    Nothing              → readUD' (n-1) env
+    Just (TVUD var)      → return var
+    Just _               → return UVNULL
+
+-- | reads user data from the load thread
+readUDIO ∷ Env → IO UserVar
+readUDIO env = do
+  udin ← readTVar'' env UDTVar
+  case udin of
+    Nothing              → readUDIO env
     Just (TVUD var)      → return var
     Just _               → return UVNULL
 
@@ -156,7 +173,7 @@ hsLoadFont env fp = do
     $ QCEvent $ EventLoadFont $ Font fp (ID id0) Nothing (-1)
   return id0
 
--- | gets the current window size
+-- | gets the current window size, doesnt work in the shell
 hsGetWindowSize ∷ Env → Lua.Lua [Int]
 hsGetWindowSize env = do
   clearUD env
@@ -170,6 +187,16 @@ hsGetWindowSize env = do
       luaEvent env $ EventLog LogError $ "[Luau] thats not a window size"
       return []
 
+-- | prints data, works in the shell
+hsEcho ∷ Env → String → Lua.Lua ()
+hsEcho env "debugFlags" = do
+  clearUD env
+  Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadGet GCDebugFlags
+  Lua.liftIO $ writeQueue'' env LuauQueue $ QCLuauCmd $ LuauCmdReadUD
+hsEcho env str          = do
+  return $ "unknown entry: " ⧺ str
+  return ()
+
 -- | adds a world object to a window
 hsNewWorld ∷ Env → String → Lua.Lua ()
 hsNewWorld env win = Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd $ LoadNew
@@ -180,7 +207,7 @@ hsSetDebug ∷ Env → String → Lua.Lua ()
 hsSetDebug env "fps"  = Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd
                                    $ LoadState $ LSCSetDebugLevel
                                    $ DebugFPS $ FPS 0 0 False
-hsSetDebug env "null" = Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd
-                                   $ LoadState $ LSCSetDebugLevel DebugNULL
+hsSetDebug env "grid" = Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd
+                                   $ LoadState $ LSCSetDebugLevel $ DebugGrid
 hsSetDebug env level  = luaEvent env $ EventLog LogWarn
                        $ "[Luau] unknown debug level" ⧺ show level

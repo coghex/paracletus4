@@ -60,7 +60,7 @@ data LoadChunk = LCWindow ID
                | LCWorld ID
                | LCNULL deriving (Show, Eq)
 -- | possible data user can request from the load thread
-data GetCommand = GCWindow
+data GetCommand = GCWindow | GCDebugFlags
                 | GCNULL deriving (Show,Eq)
 -- | possible events the input thread can handle
 data InpCmd  = InpEvent InputEvent | InpState InputStateChange
@@ -69,8 +69,8 @@ data InpCmd  = InpEvent InputEvent | InpState InputStateChange
 -- | possible changes to the load state
 data LoadStateChange = LSCRegisterTileMap String | LSCRegisterTextureMap String
                      | LSCSelectWin ID | LSCSetGLFWWindow GLFW.Window
-                     | LSCSetCamera (Double,Double,Double) | LSCSetDebugLevel DebugLevel
-                     | LSCSetFPS FPS
+                     | LSCSetCamera (Double,Double,Double)
+                     | LSCSetDebugLevel DebugLevel | LSCSetFPS FPS
                      | LSCNULL deriving (Show, Eq)
 -- | possible names of timers
 data TimerName = ShellCursorTimer | NULLTimer deriving (Show, Eq)

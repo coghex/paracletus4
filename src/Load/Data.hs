@@ -53,14 +53,14 @@ data DrawState = DrawState
   -- | we keep a copy of the camera in the load thread
   , dsCamera    ∷ (Double,Double,Double)
   -- | debug level shows various info on the screen
-  , dsDebug     ∷ DebugLevel
+  , dsDebug     ∷ [DebugLevel]
   } deriving (Show, Eq)
 
 -- | the state of the load thread meaning whether we have loaded or not
 data LoadState = Loading | Loaded deriving (Show, Eq)
 
 -- | level at which we show extra info on the screen
-data DebugLevel = DebugFPS FPS | DebugNULL deriving (Show, Eq)
+data DebugLevel = DebugFPS FPS | DebugGrid deriving (Show, Eq)
 
 -- | windows contain elements that get converted to tiles and dyns
 data Window = Window { winID    ∷ ID

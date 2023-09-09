@@ -18,7 +18,7 @@ import System.IO ( hGetContents, openFile, IOMode(..) )
 import System.Directory (getDirectoryContents)
 import System.FilePath (combine)
 import Luau.Command
-import Luau.Data ( UserData(..) )
+import Luau.Data
 import Prog.Data ( Env(..), ChanName(..), QueueName(..), QueueCmd(..) )
 import Sign.Data
     ( Event(EventLog, EventSys),
@@ -28,7 +28,7 @@ import Sign.Data
 import Sign.Thread (threadDelay)
 import Sign.Queue (readChan, tryReadChan, writeQueue)
 import Sign.Var (atomically)
-import Sign.Util ( log', readChan', tryReadQueue', writeQueue'' )
+import Sign.Util ( log', readChan', tryReadQueue'', writeQueue'' )
 
 -- | initialization of each mod file, as well as registering all
 --   of the raw functions, and kickoff of the vertex generation
@@ -65,6 +65,7 @@ luauThread env = do
         Lua.registerHaskellFunction (fromString "rawLoadFont")  (hsLoadFont     env)
         Lua.registerHaskellFunction (fromString "rawStart")     (hsStart        env)
         Lua.registerHaskellFunction (fromString "rawNewWorld")  (hsNewWorld     env)
+        Lua.registerHaskellFunction (fromString "rawEcho")      (hsEcho         env)
         Lua.registerHaskellFunction
           (fromString "rawGetWindowSize")              (hsGetWindowSize      env)
         Lua.registerHaskellFunction
@@ -116,6 +117,7 @@ luauLoop TStart env ud modFiles = do
 --        return 1
 --      else
 --        Lua.invoke (fromString "runLuau") modFiles ∷ Lua.LuaE Lua.Exception Int
+  processLuauCommands env
   end ← getCurrentTime
   let diff  = diffUTCTime end start
       usecs = floor (toRational diff * 1000000) ∷ Int
@@ -126,7 +128,45 @@ luauLoop TStart env ud modFiles = do
 luauLoop TStop  _   _  _        = return ()
 luauLoop TNULL  _   _  _        = return ()
 
--- initializes empty user data
+processLuauCommands ∷ Env → IO ()
+processLuauCommands env = do
+  mcmd ← readLuauCommand env
+  case mcmd of
+    Just cmd → do
+      ret ← processLuauCommand env cmd
+      case ret of
+        LuauResultSuccess   → processLuauCommands env
+        LuauResultError str → do
+          log' env LogError $ "luau command error: " ⧺ str
+          return ()
+    Nothing → return ()
+
+-- | reads the luau command thread
+readLuauCommand ∷ Env → IO (Maybe LuauCmd)
+readLuauCommand env = do
+  lc ← Lua.liftIO $ tryReadQueue'' env LuauQueue
+  case lc of
+    Nothing              → return Nothing
+    Just (QCLuauCmd lc0) → return $ Just lc0
+    Just badluaucmd      → do
+      log' env LogError $ "[Luau] bad luau command: " ⧺ show badluaucmd
+      return Nothing
+
+-- | processes an individual luau command
+processLuauCommand ∷ Env → LuauCmd → IO LuauResult
+processLuauCommand env LuauCmdReadUD = do
+  log' env LogInfo $ "[Luau] luau cmd read ud"
+  var ← readUDIO env
+  case var of
+    UVDebugFlags dls → do
+      writeQueue'' env LoadQueue $ QCLoadCmd $ LoadShell $ ShEcho $ show dls
+      return LuauResultSuccess
+    _                → do
+      return $ LuauResultError $ "[Luau] thats not a debugflag"
+processLuauCommand env LuauCmdNULL
+  = return $ LuauResultError $ "[Luau] NULL luau command"
+
+-- | initializes empty user data
 initUD ∷ UserData
 initUD = UserData Map.empty
 

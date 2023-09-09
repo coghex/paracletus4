@@ -13,6 +13,7 @@ import Control.Monad.Reader
 import System.Log.FastLogger
 import Data ( ID(..) )
 import Load.Data ( DynData(..), TextureMap(..), Tex(..) )
+import Luau.Data ( UserVar(..) )
 import Prog.Data ( Env(..), ChanName(..), QueueName(..), QueueCmd(..)
                  , TVarName(..), TVarValue(..))
 import Sign.Data
@@ -248,3 +249,6 @@ readFonts = do
     Nothing           → return []
     Just (TVFonts fs) → return fs
 
+-- | writes data to the user data tvar
+writeUDTVar ∷ (MonadLog μ,MonadFail μ) ⇒ UserVar → LogT μ ()
+writeUDTVar ud = modifyTVar UDTVar $ TVUD ud

@@ -23,6 +23,7 @@ import Game.World ( newWorld, generateWorldData, generateWorldTiles
 import Load.Data
 import Load.Util
 import Luau.Shell ( toggleShell, shTiles, processShellCommand, positionShell, genShellStr )
+import Luau.Data ( UserVar(..) )
 import Prog.Data
 import Prog.Buff ( generateDynData )
 import Prog.Mouse ( calcTextBoxSize )
@@ -101,7 +102,7 @@ processCommands ds = do
                 dyns  = generateDynData tiles
                 shell = shTiles fontsize (head ttfdata) shdat
                 debug = genDebugTiles fontsize debugpos
-                                      (dsDebug ds) (head' ttfdata)
+                                      (dsDebug ds) (dsTexMap ds) (head' ttfdata)
             modifyTVar DynsTVar $ TVDyns dyns
             --log' (LogDebug 1) $ "[Load] ***regenerating dyns: "
             --                  ⧺ show (length tiles)
@@ -126,7 +127,7 @@ processCommands ds = do
                 dyns  = generateDynData tiles
                 shell = shTiles fontsize (head ttfdata) shdat
                 debug = genDebugTiles fontsize debugpos
-                                      (dsDebug ds) (head' ttfdata)
+                                      (dsDebug ds) (dsTexMap ds) (head' ttfdata)
             modifyTVar VertsTVar $ TVVerts verts
             modifyTVar DynsTVar $ TVDyns dyns
             sendSys SysRecreate
@@ -194,7 +195,7 @@ generateElemTiles fontsize texmap fonts ttfdata (WinElemButton text buttid _ v)
           id0 = textFont text 
           siz = textSize text
           mov = textMoves text
-          pos' = (fst pos, snd pos + 0.5)
+          pos' = (fst pos - 0.1, snd pos + 0.5)
 generateElemTiles fontsize texmap fonts ttfdate (WinElemWorld world) =
   generateWorldTiles fontsize world texmap
 generateElemTiles _        texmap _     _       WinElemNULL        = []
@@ -230,13 +231,28 @@ processCommand ds cmd = case cmd of
     return $ LoadResultDrawState ds { dsCamera = cam
                                     , dsWins   = moveWorldCursor (dsWins ds) cam }
   LoadState (LSCSetDebugLevel dl) →
-    return $ LoadResultDrawState ds { dsDebug = dl }
-  LoadState (LSCSetFPS newfps) → case dsDebug ds of
-    DebugFPS _   → do
-      return
-      $ LoadResultDrawState ds { dsDebug  = DebugFPS newfps
-                               , dsStatus = DSSReload }
-    DebugNULL    → return LoadResultSuccess
+    return $ LoadResultDrawState ds { dsDebug = addDebugLevel (dsDebug ds) dl }
+      where addDebugLevel []        dl = [dl]
+            addDebugLevel (dl0:dls) dl = case addDebugLevelF dl0 dl of
+              Nothing → dl0 : addDebugLevel dls dl
+              Just d0 → d0  : dls
+            addDebugLevelF (DebugFPS _) (DebugFPS fps) = Just $ DebugFPS fps
+            addDebugLevelF DebugGrid    DebugGrid      = Just DebugGrid
+            addDebugLevelF dlin         _              = Just dlin
+  LoadState (LSCSetFPS newfps) →
+    return $ LoadResultDrawState ds { dsDebug  = newdl
+                                    , dsStatus = DSSReload }
+      where newdl = setFPS (dsDebug ds) newfps
+            setFPS []                 _   = []
+            setFPS ((DebugFPS _):dls) fps = DebugFPS fps : dls
+            setFPS (dl:dls)           fps = dl : setFPS dls fps
+            
+ -- case dsDebug ds of
+ --   DebugFPS _   → do
+ --     return
+ --     $ LoadResultDrawState ds { dsDebug  = DebugFPS newfps
+ --                              , dsStatus = DSSReload }
+ --   DebugNULL    → return LoadResultSuccess
   LoadTest → do
     --sendTest
     --printWorldCursor $ dsWins ds
@@ -252,12 +268,14 @@ processCommand ds cmd = case cmd of
     --return LoadResultSuccess
     return $ LoadResultDrawState $ ds { dsStatus = DSSRecreate }
   LoadID → do
-    log' LogInfo "[Load] creating id..."
+    log' (LogDebug 1) "[Load] creating id..."
     ID id0 ← liftIO newID
     writeIDTVar $ ID id0
     return LoadResultSuccess
   LoadNew lc → newChunk ds lc
-  LoadGet gc → getData ds gc
+  LoadGet gc → do
+    log' (LogDebug 1) "[Load] getting data..."
+    getData ds gc
   LoadShell shcmd → processShellCommand ds shcmd
   LoadInput input → processLoadInput ds input
   LoadTimer timer → processTimer ds timer
@@ -383,6 +401,10 @@ getData ∷ (MonadLog μ,MonadFail μ) ⇒ DrawState → GetCommand → LogT μ 
 getData _  GCWindow = do
   sendGetCommand GCWindow
   return LoadResultSuccess
+getData ds GCDebugFlags = do
+  writeUDTVar $ UVDebugFlags $ dsDebug ds
+  return LoadResultSuccess
+  
 
 -- | adds a chunk of data to the drawstate
 newChunk ∷ (MonadLog μ,MonadFail μ) ⇒ DrawState → LoadChunk → LogT μ LoadResult
@@ -473,11 +495,27 @@ createTextureAtlasMap n ((AtlasData name fp w h):tds)
     where texdat = (name, Tex fp n (w,h))
 
 -- | generates the tiles requested for debugging
-genDebugTiles ∷ Int → (Double,Double) → DebugLevel → Maybe [TTFData] → [Tile]
-genDebugTiles offset pos (DebugFPS (FPS fps _ _)) (Just ttfdata)
-  = padTiles offset 3 $ genStringTiles 0 False ttfdata 0 pos (2,2) $ showFPS fps 3
-genDebugTiles offset _   _                        Nothing        = emptyTiles 3 offset
-genDebugTiles offset _   DebugNULL                _              = emptyTiles 3 offset
+genDebugTiles ∷ Int → (Double,Double) → [DebugLevel]
+  → TextureMap → Maybe [TTFData] → [Tile]
+genDebugTiles offset pos dls tm ttfdat = debugBuff ⧺ debugTiles
+  where debugBuff  = emptyTiles (4 - (length debugTiles)) offset
+        debugTiles = genDebugTiles' offset pos dls tm ttfdat
+genDebugTiles' ∷ Int → (Double,Double) → [DebugLevel]
+  → TextureMap → Maybe [TTFData] → [Tile]
+genDebugTiles' _      _   []                   _         _                = []
+genDebugTiles' offset pos ((DebugFPS (FPS fps _ _)):dls) tm (Just ttfdat)
+  = padTiles offset 3 $ genStringTiles 0 False ttfdat 0 pos (2,2) (showFPS fps 3)
+  ⧺ genDebugTiles' offset pos dls tm (Just ttfdat)
+genDebugTiles' offset pos (DebugGrid:dls)                (TextureMap tm) ttfdat
+  = [Tile IDNULL (TilePos (0,0) (1,1)) (findTex offset "whiteTile" tm) (TileBhv True)]
+  ⧺ genDebugTiles' offset pos dls (TextureMap tm) ttfdat
+genDebugTiles' _      _   _                              _               Nothing = []
+
+--genDebugTiles ∷ Int → (Double,Double) → DebugLevel → Maybe [TTFData] → [Tile]
+--genDebugTiles offset pos (DebugFPS (FPS fps _ _)) (Just ttfdata)
+--  = padTiles offset 3 $ genStringTiles 0 False ttfdata 0 pos (2,2) $ showFPS fps 3
+--genDebugTiles offset _   _                        Nothing        = emptyTiles 3 offset
+--genDebugTiles offset _   DebugNULL                _              = emptyTiles 3 offset
 
 -- | position of where debug info is
 positionDebug ∷ (MonadLog μ,MonadFail μ) ⇒ Maybe GLFW.Window → LogT μ (Double,Double)
@@ -504,7 +542,7 @@ printWorldCursorInElems (we:wes) = printWorldCursorInElems wes
 initDrawState ∷ DrawState
 initDrawState = DrawState DSSNULL Nothing (TextureMap [])
                           Map.empty IDNULL initShell Loading
-                          (0,0,-1) DebugNULL
+                          (0,0,-1) []
 -- | creates a shell with empty values
 initShell ∷ Shell
 initShell = Shell "$> " Nothing 1 True "" "" "" ""
