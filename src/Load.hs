@@ -220,6 +220,8 @@ processCommand ds cmd = case cmd of
           return LoadResultSuccess
         else
           return $ LoadResultDrawState $ ds { dsCurr = name
+                                            , dsDebug = setGrid (dsDebug ds)
+                                                                (Map.lookup name wins)
                                             --, dsLoad = Loading
                                             , dsStatus = DSSRecreate }
       Nothing → do
@@ -232,13 +234,12 @@ processCommand ds cmd = case cmd of
                                     , dsWins   = moveWorldCursor (dsWins ds) cam }
   LoadState (LSCSetDebugLevel dl) →
     return $ LoadResultDrawState ds { dsDebug = addDebugLevel (dsDebug ds) dl }
-      where addDebugLevel []        dl = [dl]
-            addDebugLevel (dl0:dls) dl = case addDebugLevelF dl0 dl of
-              Nothing → dl0 : addDebugLevel dls dl
-              Just d0 → d0  : dls
-            addDebugLevelF (DebugFPS _) (DebugFPS fps) = Just $ DebugFPS fps
-            addDebugLevelF DebugGrid    DebugGrid      = Just DebugGrid
-            addDebugLevelF dlin         _              = Just dlin
+      where addDebugLevel []        dlin = [dlin]
+            addDebugLevel (dl0:dls) dlin
+              = addDebugLevelF dl0 dlin : addDebugLevel dls dlin
+            addDebugLevelF (DebugFPS _)  (DebugFPS fps) = DebugFPS fps
+            addDebugLevelF (DebugGrid _) (DebugGrid v)  = DebugGrid v
+            addDebugLevelF dlin         _              = dlin
   LoadState (LSCSetFPS newfps) →
     return $ LoadResultDrawState ds { dsDebug  = newdl
                                     , dsStatus = DSSReload }
@@ -327,11 +328,25 @@ processLoadInputButtFunc ds (BFLink link) = do
           sendGenerateWindowData link
           sendSys SysResetCam
           return $ LoadResultDrawState $ ds { dsCurr   = link
+                                            , dsDebug  = setGrid (dsDebug ds)
+                                                                 (Map.lookup link wins)
                                             , dsLoad   = Loading
                                             , dsStatus = DSSRecreate }
       Nothing → return $ LoadResultError $ "no window " ⧺ show link
 processLoadInputButtFunc ds bf            = do
   return $ LoadResultError $ "[Load] unknown button function " ⧺ show bf
+
+-- | sets the grid to on when we are on the world screen during a window change
+setGrid ∷ [DebugLevel] → Maybe Window → [DebugLevel]
+setGrid dls                 Nothing   = dls
+setGrid []                  _         = []
+setGrid ((DebugGrid _):dls) (Just w0) = dl' : setGrid dls (Just w0)
+  where dl' = setGridIfWorld (winElems w0)
+setGrid (dl:dls)            (Just w0) = dl : setGrid dls (Just w0)
+setGridIfWorld ∷ [WinElem] → DebugLevel
+setGridIfWorld []                   = DebugGrid False
+setGridIfWorld ((WinElemWorld _):_) = DebugGrid True
+setGridIfWorld (_:wes)              = setGridIfWorld wes
 
 -- | evaluates a click based on the winelems under it
 processClick ∷ (Double,Double) → Map.Map ID Window → Map.Map ID Window
@@ -506,9 +521,13 @@ genDebugTiles' _      _   []                   _         _                = []
 genDebugTiles' offset pos ((DebugFPS (FPS fps _ _)):dls) tm (Just ttfdat)
   = padTiles offset 3 $ genStringTiles 0 False ttfdat 0 pos (2,2) (showFPS fps 3)
   ⧺ genDebugTiles' offset pos dls tm (Just ttfdat)
-genDebugTiles' offset pos (DebugGrid:dls)                (TextureMap tm) ttfdat
-  = [Tile IDNULL (TilePos (0,0) (1,1)) (findTex offset "whiteTile" tm) (TileBhv True)]
-  ⧺ genDebugTiles' offset pos dls (TextureMap tm) ttfdat
+genDebugTiles' offset pos ((DebugGrid v):dls)                (TextureMap tm) ttfdat
+  = tile ⧺ genDebugTiles' offset pos dls (TextureMap tm) ttfdat
+    where tile = if v then
+                   [Tile IDNULL (TilePos (0,0) (4,4))
+                                        (findTex offset "gridTile" tm)
+                                        (TileBhv True)]
+                 else [emptyTile offset]
 genDebugTiles' _      _   _                              _               Nothing = []
 
 --genDebugTiles ∷ Int → (Double,Double) → DebugLevel → Maybe [TTFData] → [Tile]

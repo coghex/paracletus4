@@ -208,6 +208,6 @@ hsSetDebug env "fps"  = Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd
                                    $ LoadState $ LSCSetDebugLevel
                                    $ DebugFPS $ FPS 0 0 False
 hsSetDebug env "grid" = Lua.liftIO $ writeQueue'' env LoadQueue $ QCLoadCmd
-                                   $ LoadState $ LSCSetDebugLevel $ DebugGrid
+                                   $ LoadState $ LSCSetDebugLevel $ DebugGrid False
 hsSetDebug env level  = luaEvent env $ EventLog LogWarn
                        $ "[Luau] unknown debug level" ⧺ show level

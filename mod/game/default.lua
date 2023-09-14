@@ -9,6 +9,7 @@ function initMod ()
     -- basic UI elements
     game.logDebug("default mod: initMod()")
     game.setDebug("fps")
+    game.setDebug("grid")
     initInput ()
     fonts = initTextures ()
     m = initMenu(fonts)

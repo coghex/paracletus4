@@ -60,7 +60,7 @@ data DrawState = DrawState
 data LoadState = Loading | Loaded deriving (Show, Eq)
 
 -- | level at which we show extra info on the screen
-data DebugLevel = DebugFPS FPS | DebugGrid deriving (Show, Eq)
+data DebugLevel = DebugFPS FPS | DebugGrid Bool deriving (Show, Eq)
 
 -- | windows contain elements that get converted to tiles and dyns
 data Window = Window { winID    ∷ ID
